@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="color-scheme" content="light dark" />
+<title>Registro · Grabados Divergency AI</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #fff; --border: #dfe3e8; --text: #14181d;
+    --muted: #6b7480; --accent: #f5a623; --accent-ink: #2b1d00;
+    --ok: #1c7c48; --err: #b3261e; --logo-bg: #fff;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14171b; --panel: #1c2025; --border: #2e343b; --text: #e8eaed;
+      --muted: #98a1ac; --accent: #f5a623; --accent-ink: #2b1d00;
+      --ok: #5cc98e; --err: #f2837b; --logo-bg: #e8eaed;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 1.5rem 1.1rem 3rem; background: var(--bg); color: var(--text);
+    font: 16px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  main { max-width: 420px; margin: 0 auto; }
+
+  .logo {
+    display: block; width: 165px; max-width: 60%; margin: .5rem auto 1.3rem;
+    background: var(--logo-bg); border-radius: 8px; padding: .5rem .7rem;
+  }
+  h1 { font-size: 1.35rem; margin: 0 0 .3rem; letter-spacing: -.02em; text-align: center; }
+  .sub { color: var(--muted); margin: 0 0 1.5rem; font-size: .92rem; text-align: center; }
+
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 1.3rem 1.1rem; }
+  label { display: block; font-weight: 600; font-size: .88rem; margin-bottom: .35rem; }
+  input {
+    width: 100%; padding: .85rem .8rem; border: 1px solid var(--border); border-radius: 9px;
+    background: var(--bg); color: var(--text); font: inherit;
+  }
+  input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  .field { margin-bottom: 1.05rem; }
+  .hint { color: var(--muted); font-size: .78rem; margin: .3rem 0 0; }
+
+  button {
+    width: 100%; padding: 1rem; background: var(--accent); color: var(--accent-ink);
+    border: 0; border-radius: 10px; font: inherit; font-weight: 800; font-size: 1.05rem; cursor: pointer;
+  }
+  button:disabled { opacity: .55; cursor: not-allowed; }
+
+  .msg { margin-top: 1rem; padding: .8rem .9rem; border-radius: 9px; font-size: .92rem; font-weight: 600; }
+  .msg.err { background: color-mix(in srgb, var(--err) 14%, transparent); color: var(--err); }
+
+  /* --- el turno --- */
+  #ticket { text-align: center; }
+  #ticket .quien { font-size: 1.05rem; font-weight: 700; margin: 0 0 .1rem; }
+  #ticket .label { color: var(--muted); font-size: .9rem; margin: 0 0 .2rem; }
+  #ticket .turno {
+    font-size: 4.6rem; font-weight: 800; line-height: 1.05; letter-spacing: -.04em;
+    color: var(--accent); margin: .2rem 0 .1rem;
+  }
+  #ticket .delante { margin: .5rem 0 0; font-size: .95rem; }
+  #ticket .delante b { color: var(--text); }
+  #ticket .guarda {
+    margin: 1.2rem 0 0; padding-top: 1rem; border-top: 1px solid var(--border);
+    color: var(--muted); font-size: .85rem;
+  }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <img class="logo" src="logo.png" alt="Divergency AI" />
+  <h1>Grabados Divergency AI</h1>
+  <p class="sub">Déjanos tus datos y te llamamos por tu número para grabar tu pieza.</p>
+
+  <div class="card">
+    <form id="f" novalidate>
+      <div class="field">
+        <label for="nombre">Nombre</label>
+        <input type="text" id="nombre" name="nombre" autocomplete="name" enterkeyhint="next"
+               maxlength="60" placeholder="Como quieres que salga grabado" required />
+        <p class="hint">Tal cual lo escribas es como se graba.</p>
+      </div>
+
+      <div class="field">
+        <label for="celular">Celular</label>
+        <input type="tel" id="celular" name="celular" autocomplete="tel" inputmode="tel"
+               enterkeyhint="next" maxlength="25" placeholder="300 123 4567" required />
+      </div>
+
+      <div class="field">
+        <label for="correo">Correo</label>
+        <input type="email" id="correo" name="correo" autocomplete="email" inputmode="email"
+               enterkeyhint="done" maxlength="100" placeholder="tucorreo@ejemplo.com" required />
+      </div>
+
+      <button type="submit" id="btn">Pedir mi turno</button>
+      <div id="msg" class="msg err hidden"></div>
+    </form>
+
+    <div id="ticket" class="hidden">
+      <p class="quien" id="quien"></p>
+      <p class="label">Tu turno es el</p>
+      <p class="turno" id="turno"></p>
+      <p class="delante" id="delante"></p>
+      <p class="guarda">Guarda este número: es con el que te llamamos. Puedes cerrar la página.</p>
+    </div>
+  </div>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id)
+
+function error(texto) {
+  $('msg').textContent = texto
+  $('msg').classList.remove('hidden')
+}
+
+$('f').addEventListener('submit', async (e) => {
+  e.preventDefault()
+  $('msg').classList.add('hidden')
+
+  const datos = {
+    nombre: $('nombre').value,
+    celular: $('celular').value,
+    correo: $('correo').value,
+  }
+  if (!datos.nombre.trim()) return error('Escribe tu nombre')
+
+  $('btn').disabled = true
+  $('btn').textContent = 'Registrando…'
+  try {
+    const r = await (await fetch('registro', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(datos),
+    })).json()
+
+    if (!r.ok) return error(r.error || 'No se pudo registrar')
+
+    // Los datos vuelven del servidor ya validados y se pintan como texto, nunca
+    // como HTML: lo que escribe una persona no se interpreta.
+    $('quien').textContent = r.nombre
+    $('turno').textContent = '#' + r.turno
+    $('delante').innerHTML = r.delante > 0
+      ? `Hay <b>${r.delante}</b> persona${r.delante === 1 ? '' : 's'} antes que tú.`
+      : '<b>Eres el siguiente.</b>'
+    if (r.repetido) {
+      $('delante').innerHTML += '<br><span style="color:var(--muted);font-size:.85rem">Ya estabas registrado: este es el mismo número de antes.</span>'
+    }
+    $('f').classList.add('hidden')
+    $('ticket').classList.remove('hidden')
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  } catch (err) {
+    error('No hay conexión con el puesto. Comprueba que sigues en el wifi del evento.')
+  } finally {
+    $('btn').disabled = false
+    $('btn').textContent = 'Pedir mi turno'
+  }
+})
+</script>
+</body>
+</html>

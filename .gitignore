@@ -1,0 +1,26 @@
+# Lo que escribe el puente al usarse, no el codigo.
+plantillas.json
+cola.json
+cola.json.tmp
+
+# Datos de gente que se registro en un evento: nombre, celular y correo. Esto
+# no sube a ningun sitio.
+*.cola.json
+
+# Salida intermedia del build (el .cjs, el blob y el .exe en bruto).
+build/out/
+
+# El ejecutable no entra en el repositorio: son 92 MB por version y el historial
+# de git no los suelta nunca. Se publica como release asset, que es donde GitHub
+# quiere los binarios, y la landing enlaza a la ultima. Lo que si viaja es
+# version.json con su tamano y su huella, que es lo que la pagina lee.
+web/descargas/*.exe
+
+node_modules/
+
+# Windows los deja al personalizar una carpeta.
+desktop.ini
+Thumbs.db
+
+# Ajustes locales del asistente, propios de este equipo.
+.claude/settings.local.json

@@ -1,0 +1,10 @@
+{
+  "producto": "Divergency Grabadora Láser",
+  "version": "1.0.0",
+  "archivo": "DivergencyGrabadoraLaser.exe",
+  "bytes": 96069632,
+  "tamano": "91.6 MB",
+  "sha256": "4a768f8854764540dd29147f59f7ee4ba85c99045327f37e8c3c7970b33377ec",
+  "fecha": "2026-08-12",
+  "node": "v25.9.0"
+}

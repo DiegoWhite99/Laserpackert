@@ -1,0 +1,15 @@
+{
+  "name": "laserpecker-bridge",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Landing + puente HTTP para crear proyectos .lp2 de LaserPecker Design Space via POST",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "build": "powershell -NoProfile -ExecutionPolicy Bypass -File build/build.ps1",
+    "landing": "node web/serve.js"
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  }
+}

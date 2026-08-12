@@ -1,0 +1,1356 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Grabados Divergency AI</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #fff; --border: #dfe3e8; --text: #14181d;
+    --muted: #6b7480; --accent: #f5a623; --accent-ink: #2b1d00;
+    --ok: #1c7c48; --err: #b3261e; --warn: #b06a00;
+    --code-bg: #f0f2f5; --logo-bg: #fff; --fire: #d1401f;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14171b; --panel: #1c2025; --border: #2e343b; --text: #e8eaed;
+      --muted: #98a1ac; --accent: #f5a623; --accent-ink: #2b1d00;
+      --ok: #5cc98e; --err: #f2837b; --warn: #e0a458;
+      --code-bg: #12151a; --logo-bg: #e8eaed; --fire: #f2643c;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 2rem 1.25rem 4rem; background: var(--bg); color: var(--text);
+    font: 15px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  main { max-width: 640px; margin: 0 auto; }
+
+  /* --- barra de arriba --- */
+  .nav {
+    display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+    padding-bottom: .9rem; margin-bottom: 1.1rem; border-bottom: 1px solid var(--border);
+  }
+  .nav .marca {
+    display: flex; align-items: center; gap: .55rem;
+    font-weight: 700; font-size: .92rem; letter-spacing: -.01em;
+  }
+  .nav .marca img {
+    height: 22px; background: var(--logo-bg); border-radius: 5px; padding: 2px 5px;
+  }
+  .navBtn {
+    display: inline-flex; align-items: center; gap: .35rem; text-decoration: none;
+    padding: .45rem .8rem; border-radius: 8px; font-size: .84rem; font-weight: 700;
+    border: 1px solid var(--border); background: var(--panel); color: var(--text); white-space: nowrap;
+  }
+  .navBtn:hover { border-color: var(--accent); color: var(--accent); }
+
+  h1 { font-size: 1.4rem; margin: 0 0 .2rem; letter-spacing: -.02em; }
+  .sub { color: var(--muted); margin: 0 0 1.5rem; font-size: .9rem; }
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 1.4rem; }
+
+  /* --- plantilla --- */
+  .tabs { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; margin-bottom: 1.2rem; }
+  .tab {
+    padding: .7rem .5rem; border: 1px solid var(--border); border-radius: 9px; background: var(--bg);
+    cursor: pointer; text-align: center; font-size: .9rem; font-weight: 600; color: var(--text);
+  }
+  .tab small { display: block; font-weight: 400; font-size: .74rem; color: var(--muted); margin-top: .15rem; }
+  .tab[aria-selected=true] {
+    border-color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent);
+  }
+
+  /* --- estado --- */
+  .status {
+    display: flex; align-items: flex-start; gap: .6rem; margin-bottom: 1.2rem;
+    padding: .65rem .85rem; border-radius: 8px; font-size: .83rem;
+    background: var(--bg); border: 1px solid var(--border);
+  }
+  .dot { width: 9px; height: 9px; border-radius: 50%; flex: 0 0 auto; margin-top: .35rem; }
+  .dot.pending { background: var(--muted); }
+  .dot.live { background: var(--ok); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 25%, transparent); }
+  .dot.offline { background: var(--accent); }
+  .status code {
+    font-family: ui-monospace, Consolas, monospace; font-size: .77rem;
+    background: var(--code-bg); padding: .1rem .3rem; border-radius: 4px;
+  }
+  .status .body { flex: 1; min-width: 0; }
+  #liveFix { margin-top: .6rem; }
+  #liveFix button {
+    width: auto; padding: .45rem .8rem; font-size: .82rem; font-weight: 700;
+    background: var(--accent); color: var(--accent-ink); border-radius: 7px;
+  }
+  #liveFix .note { display: block; color: var(--muted); font-size: .78rem; margin-top: .45rem; }
+  #liveFix .opt { display: flex; align-items: center; gap: .4rem; margin-top: .5rem; font-size: .78rem; color: var(--muted); }
+  #liveFix .opt input { width: auto; }
+  #liveFix .opt label { margin: 0; font-weight: 400; font-size: .78rem; }
+  .actionRow { margin-top: .6rem; display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
+  .actionRow button {
+    width: auto; padding: .45rem .8rem; font-size: .82rem; font-weight: 700;
+    background: var(--accent); color: var(--accent-ink); border-radius: 7px;
+  }
+  .actionRow button.quiet { background: var(--panel); color: var(--text); border: 1px solid var(--border); font-weight: 600; }
+  .actionRow .note { color: var(--muted); font-size: .78rem; }
+
+  /* --- confirmacion de la vista previa --- */
+  #confirmBox {
+    margin-top: 1rem; padding: 1rem; border-radius: 10px;
+    border: 2px solid var(--fire); background: color-mix(in srgb, var(--fire) 10%, transparent);
+  }
+  #confirmBox .ask { margin: 0 0 .35rem; font-weight: 800; font-size: 1rem; }
+  #confirmBox .askDetail { margin: 0 0 .9rem; font-size: .86rem; color: var(--text); opacity: .85; }
+  #confirmBox .pair { display: grid; grid-template-columns: 1.6fr 1fr; gap: .6rem; }
+  #confirmBox .pair button { padding: .8rem; font-size: .95rem; }
+
+  /* --- acciones sobre la pieza generada --- */
+  #acciones { margin-top: 1rem; }
+  #acciones details { margin-top: .8rem; margin-bottom: 0; }
+  .tplRow { display: grid; grid-template-columns: 1fr auto; gap: .5rem; margin: .7rem 0 .3rem; }
+  .tplRow button { width: auto; white-space: nowrap; }
+  .tab .del {
+    display: inline-block; margin-left: .4rem; padding: 0 .28rem; border-radius: 4px;
+    font-weight: 700; color: var(--muted);
+  }
+  .tab .del:hover { background: color-mix(in srgb, var(--err) 22%, transparent); color: var(--err); }
+
+  label { display: block; font-weight: 600; font-size: .85rem; margin-bottom: .4rem; }
+  input[type=text], textarea, input[type=number], select {
+    width: 100%; padding: .6rem .7rem; border: 1px solid var(--border); border-radius: 7px;
+    background: var(--bg); color: var(--text); font: inherit;
+  }
+  #name { font-size: 1.25rem; padding: .75rem .8rem; font-weight: 600; }
+  textarea { min-height: 150px; resize: vertical; font-family: ui-monospace, Consolas, monospace; line-height: 1.7; font-size: .92rem; }
+  input:focus, textarea:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  .field { margin-bottom: 1.1rem; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .measure { color: var(--muted); font-size: .8rem; margin-top: .4rem; min-height: 1.2em; }
+  .measure b { color: var(--text); }
+  .measure .wide { color: var(--warn); font-weight: 600; }
+
+  details { margin-bottom: 1.1rem; border: 1px solid var(--border); border-radius: 8px; padding: .65rem .85rem; }
+  details[open] { padding-bottom: .2rem; }
+  summary { cursor: pointer; font-weight: 600; font-size: .85rem; }
+  details .row { margin-top: .9rem; }
+
+  button {
+    width: 100%; padding: .95rem; background: var(--accent); color: var(--accent-ink);
+    border: 0; border-radius: 9px; font: inherit; font-weight: 800; font-size: 1.02rem;
+    cursor: pointer; letter-spacing: .01em;
+  }
+  button.fire { background: var(--fire); color: #fff; }
+  button:hover:not(:disabled) { filter: brightness(1.07); }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  button.secondary { background: var(--bg); color: var(--text); border: 1px solid var(--border); font-weight: 600; font-size: .92rem; padding: .7rem; }
+
+  .caution {
+    margin-top: .7rem; font-size: .8rem; color: var(--warn); text-align: center;
+  }
+  .dry { display: flex; align-items: center; gap: .5rem; margin-top: .9rem; font-size: .82rem; color: var(--muted); }
+  .dry input { width: auto; }
+  .dry label { margin: 0; font-weight: 400; font-size: .82rem; }
+
+  #out { margin-top: 1.4rem; display: none; }
+  #out.show { display: block; }
+  .msg { padding: .85rem 1rem; border-radius: 8px; font-size: .93rem; font-weight: 600; margin-bottom: .8rem; }
+  .msg.ok { background: color-mix(in srgb, var(--ok) 14%, transparent); color: var(--ok); }
+  .msg.err { background: color-mix(in srgb, var(--err) 14%, transparent); color: var(--err); }
+  .msg.fire { background: color-mix(in srgb, var(--fire) 16%, transparent); color: var(--fire); }
+  .msg small { display: block; font-weight: 400; margin-top: .3rem; opacity: .9; }
+  ul.results { list-style: none; padding: 0; margin: 0; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  ul.results li {
+    display: flex; justify-content: space-between; gap: 1rem; align-items: baseline;
+    padding: .5rem .85rem; font-size: .87rem; background: var(--panel); border-top: 1px solid var(--border);
+  }
+  ul.results li:first-child { border-top: 0; }
+  ul.results li.bad { color: var(--err); }
+  ul.results code { color: var(--muted); font-size: .78rem; font-family: ui-monospace, Consolas, monospace; }
+
+  /* --- registro por QR y cola --- */
+  .bloque { margin-top: 1.2rem; }
+  .bloque:first-of-type { margin-top: .9rem; }
+  .bloque > h3 {
+    font-size: .78rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted);
+    margin: 0 0 .6rem; font-weight: 700;
+  }
+  .qr { display: grid; grid-template-columns: auto 1fr; gap: 1rem; align-items: center; margin-top: .8rem; }
+  .qr img { width: 168px; height: 168px; background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 6px; }
+  .qr .url {
+    font-family: ui-monospace, Consolas, monospace; font-size: .84rem; word-break: break-all;
+    background: var(--code-bg); padding: .35rem .5rem; border-radius: 6px; display: inline-block;
+  }
+  .qr .note { color: var(--muted); font-size: .78rem; margin: .5rem 0 .6rem; }
+  .qr .mas { display: flex; gap: .4rem; flex-wrap: wrap; }
+  .qr .mas button { width: auto; padding: .4rem .7rem; font-size: .8rem; }
+
+  /* --- listas con casillas (cola y galería) --- */
+  .lista { border: 1px solid var(--border); border-radius: 8px; max-height: 15rem; overflow-y: auto; }
+  .lista .fila {
+    display: flex; gap: .6rem; align-items: baseline; padding: .45rem .7rem;
+    border-top: 1px solid var(--border); font-size: .87rem;
+  }
+  .lista .fila:first-child { border-top: 0; }
+  .lista .fila input { width: auto; flex: 0 0 auto; align-self: center; }
+  .lista .fila .quien { flex: 1; min-width: 0; }
+  .lista .fila .quien b { font-weight: 700; }
+  .lista .fila .quien small { display: block; color: var(--muted); font-size: .76rem; }
+  .lista .fila .turno {
+    flex: 0 0 auto; font-weight: 800; color: var(--accent); font-size: .9rem;
+    font-variant-numeric: tabular-nums;
+  }
+  .lista .fila.guardada .quien b { color: var(--muted); }
+  .lista .fila .tag {
+    flex: 0 0 auto; font-size: .7rem; text-transform: uppercase; letter-spacing: .04em;
+    color: var(--muted); border: 1px solid var(--border); border-radius: 5px; padding: 0 .3rem;
+  }
+  .vacia { color: var(--muted); font-size: .85rem; padding: .7rem 0; }
+  .barra { display: flex; gap: .5rem; margin-top: .7rem; flex-wrap: wrap; align-items: center; }
+  .barra button { width: auto; padding: .55rem .8rem; font-size: .85rem; }
+  .barra .link {
+    background: none; border: 0; color: var(--muted); font-size: .8rem; padding: .3rem;
+    cursor: pointer; text-decoration: underline; width: auto; font-weight: 400;
+  }
+  button.peligro { background: var(--err); color: #fff; }
+  .aviso { font-size: .8rem; color: var(--muted); margin: .6rem 0 0; }
+  .aviso b { color: var(--text); }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <nav class="nav">
+    <span class="marca"><img src="/logo.png" alt="" />Divergency AI</span>
+    <a class="navBtn" id="portal" href="https://diegowhite99.github.io/Laserpackert/" target="_blank" rel="noopener">
+      Portal de descargas <span aria-hidden="true">↗</span>
+    </a>
+  </nav>
+
+  <h1>Grabados Divergency AI</h1>
+  <p class="sub">Escribe el nombre y graba. El logo va fijo; solo cambia el nombre.</p>
+
+  <div class="card">
+    <div class="tabs" id="tabs" role="tablist"></div>
+
+    <div class="status" id="status">
+      <span class="dot pending"></span>
+      <div class="body">
+        <span id="statusText">Comprobando la máquina…</span>
+        <div id="liveFix" class="hidden">
+          <button type="button" id="btnLive">Activar modo en vivo</button>
+          <div class="opt">
+            <input type="checkbox" id="mkShortcut" />
+            <label for="mkShortcut">crear un atajo en el Escritorio que ya abra la app así</label>
+          </div>
+          <span class="note" id="liveNote"></span>
+        </div>
+
+        <div id="devFix" class="actionRow hidden">
+          <button type="button" id="btnConnect">Conectar la máquina</button>
+          <span class="note" id="devNote"></span>
+        </div>
+
+        <div id="jobFix" class="actionRow hidden">
+          <button type="button" id="btnStop" class="quiet">Detener</button>
+          <span class="note">para la vista previa o el grabado en curso</span>
+        </div>
+      </div>
+    </div>
+
+    <form id="f">
+      <div class="field">
+        <label for="name">Nombre</label>
+        <input type="text" id="name" autocomplete="off" spellcheck="false" autofocus placeholder="Jarvey" />
+        <p class="measure" id="measure"></p>
+      </div>
+
+      <details>
+        <summary>Parámetros de láser</summary>
+        <div class="row">
+          <div>
+            <label for="power">Potencia logo</label>
+            <input type="number" id="power" min="1" max="100" />
+          </div>
+          <div>
+            <label for="depth">Profundidad logo</label>
+            <input type="number" id="depth" min="1" max="100" />
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label for="textPower">Potencia nombre</label>
+            <input type="number" id="textPower" min="1" max="100" />
+          </div>
+          <div>
+            <label for="textDepth">Profundidad nombre</label>
+            <input type="number" id="textDepth" min="1" max="100" />
+          </div>
+        </div>
+        <p class="measure" id="matLine"></p>
+      </details>
+
+      <div id="fireBox">
+        <button type="submit" id="btn" class="fire">Generar y ver vista previa</button>
+        <p class="caution" id="caution">Primero se recorre el contorno sobre la pieza; el grabado no arranca hasta que lo confirmes.</p>
+
+        <div class="dry">
+          <input type="checkbox" id="dryRun" />
+          <label for="dryRun">Modo ensayo · abre el proyecto y comprueba todo, pero no dispara</label>
+        </div>
+      </div>
+    </form>
+
+    <!-- Paso 2: el láser no se dispara sin que alguien haya mirado la pieza. -->
+    <div id="confirmBox" class="hidden">
+      <p class="ask">Comprueba la vista previa sobre la pieza</p>
+      <p class="askDetail" id="confirmDetail"></p>
+      <div class="pair">
+        <button type="button" id="btnGo" class="fire">Continuar y grabar</button>
+        <button type="button" id="btnCancel" class="secondary">Cancelar</button>
+      </div>
+    </div>
+
+    <details style="margin-top:1.2rem" id="loteBox">
+      <summary>Lote de nombres (solo generar, sin grabar)<span id="loteResumen"></span></summary>
+
+      <!-- La gente se apunta sola escaneando el código; aquí solo se genera. -->
+      <div class="bloque">
+        <h3>Registro por QR</h3>
+        <div class="actionRow">
+          <button type="button" id="btnQr">Abrir el registro</button>
+          <span class="note" id="qrEstado">cerrado · nadie puede apuntarse</span>
+        </div>
+
+        <div id="qrCaja" class="qr hidden">
+          <img id="qrImg" alt="Código QR del registro" />
+          <div>
+            <span class="url" id="qrUrl"></span>
+            <p class="note" id="qrNota"></p>
+            <div class="mas">
+              <button type="button" id="btnQrPrint" class="secondary">Imprimir el cartel</button>
+              <button type="button" id="btnQrOtra" class="secondary hidden">Otra dirección</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bloque">
+        <h3>En cola <span id="colaCuenta"></span></h3>
+        <div id="colaLista" class="lista hidden"></div>
+        <p class="vacia" id="colaVacia">Nadie se ha registrado todavía.</p>
+        <div class="barra">
+          <button type="button" id="btnColaGen">Generar las seleccionadas</button>
+          <button type="button" id="btnColaQuitar" class="secondary">Quitar de la cola</button>
+          <button type="button" id="btnColaVer" class="link">ver las ya generadas</button>
+          <button type="button" id="btnColaVaciar" class="link">vaciar la cola</button>
+        </div>
+      </div>
+
+      <div class="bloque">
+        <h3>O escríbelos a mano</h3>
+        <div class="field">
+          <textarea id="names" spellcheck="false" placeholder="Viviana Jimenez&#10;Diego Castelblanco&#10;Ana María Rojas"></textarea>
+          <p class="measure" id="count">Ningún nombre todavía</p>
+        </div>
+        <button type="button" id="btnBatch" class="secondary">Generar el lote</button>
+      </div>
+    </details>
+
+    <details style="margin-top:.8rem" id="galeriaBox">
+      <summary>Vaciar la galería de Design Space</summary>
+      <p class="aviso" id="galeriaResumen">Cargando…</p>
+      <div id="galeriaLista" class="lista hidden" style="margin-top:.7rem"></div>
+      <div class="barra">
+        <button type="button" id="btnVaciar" class="peligro">Eliminar todos los proyectos</button>
+        <button type="button" id="btnGaleriaRecargar" class="link">actualizar la lista</button>
+      </div>
+      <div class="dry">
+        <input type="checkbox" id="borrarArchivos" />
+        <label for="borrarArchivos">borrar también los archivos .lp2 del disco (ya no se podrán recuperar)</label>
+      </div>
+      <p class="aviso">
+        Los proyectos van a la <b>papelera de Design Space</b> y se pueden restaurar desde la app.
+        Las plantillas y los formatos originales no se tocan.
+      </p>
+    </details>
+  </div>
+
+  <div id="out">
+    <div class="msg" id="msg"></div>
+    <ul class="results" id="list"></ul>
+
+    <!-- Lo que se puede hacer con la pieza recién generada. -->
+    <div id="acciones" class="hidden">
+      <div class="actionRow">
+        <button type="button" id="btnAbrir">Realizar proyecto</button>
+        <span class="note">lo abre en Design Space para ajustarlo a mano</span>
+      </div>
+      <details id="tplBox">
+        <summary>¿Guardar este proyecto como plantilla?</summary>
+        <p class="measure" id="tplHint"></p>
+        <div class="tplRow">
+          <input type="text" id="tplName" autocomplete="off" placeholder="Esfero ajustado" maxlength="40" />
+          <button type="button" id="btnTpl" class="secondary">Guardar plantilla</button>
+        </div>
+      </details>
+    </div>
+  </div>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id)
+let TEMPLATES = []
+let current = 'esfero'
+let deviceReady = false
+// Mientras se reinicia Design Space el sondeo periodico no debe pisar el boton
+// ni el texto de progreso.
+let enabling = false
+let appRunning = false
+// Pieza generada con la vista previa en marcha, esperando el visto bueno.
+let pendiente = null
+
+// --- plantillas -----------------------------------------------------------
+
+function renderTabs() {
+  $('tabs').innerHTML = ''
+  // Con plantillas propias la rejilla de dos columnas se queda corta.
+  $('tabs').style.gridTemplateColumns = TEMPLATES.length > 2 ? 'repeat(auto-fit, minmax(140px, 1fr))' : '1fr 1fr'
+  for (const t of TEMPLATES) {
+    const b = document.createElement('button')
+    b.type = 'button'
+    b.className = 'tab'
+    b.setAttribute('role', 'tab')
+    b.setAttribute('aria-selected', String(t.id === current))
+    b.innerHTML = `${t.label}<small>${t.material} · ${t.logoPower}/${t.logoDepth} · ${t.textPower}/${t.textDepth}</small>`
+    b.onclick = () => { current = t.id; renderTabs(); applyDefaults(); measure(); $('name').focus() }
+
+    // Las propias se pueden quitar; las base no.
+    if (t.custom) {
+      const x = document.createElement('span')
+      x.className = 'del'
+      x.textContent = '✕'
+      x.title = `Borrar la plantilla "${t.label}"`
+      x.onclick = async (ev) => {
+        ev.stopPropagation()
+        if (!confirm(`¿Borrar la plantilla "${t.label}"? Las piezas ya generadas no se tocan.`)) return
+        try {
+          const r = await (await fetch('/api/templates', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: t.id }),
+          })).json()
+          if (!r.ok) return show('err', 'No se pudo borrar la plantilla', r.error || '')
+          usarPlantillas(r.templates)
+          show('ok', `Plantilla "${t.label}" borrada`)
+        } catch (err) {
+          show('err', 'No se pudo contactar el puente', err.message)
+        }
+      }
+      b.querySelector('small').append(x)
+    }
+    $('tabs').append(b)
+  }
+}
+
+/** Aplica una lista de plantillas nueva sin perder la selección si sigue viva. */
+function usarPlantillas(lista) {
+  TEMPLATES = lista || []
+  if (!TEMPLATES.some((t) => t.id === current)) current = TEMPLATES[0]?.id || 'esfero'
+  renderTabs()
+  applyDefaults()
+  measure()
+}
+
+function tpl() { return TEMPLATES.find((t) => t.id === current) }
+
+function applyDefaults() {
+  const t = tpl()
+  if (!t) return
+  $('power').value = t.logoPower
+  $('depth').value = t.logoDepth
+  $('textPower').value = t.textPower
+  $('textDepth').value = t.textDepth
+  $('matLine').textContent = `${t.material} · ${t.fontFamily}`
+}
+
+// --- medida en vivo -------------------------------------------------------
+// La calcula el puente para no duplicar aqui las metricas de fuente.
+
+let measureTimer = null
+function measure() {
+  clearTimeout(measureTimer)
+  const name = $('name').value.trim()
+  if (!name) { $('measure').textContent = ''; return }
+  measureTimer = setTimeout(async () => {
+    try {
+      const r = await (await fetch(`/api/measure?template=${current}&name=${encodeURIComponent(name)}`)).json()
+      if (!r.ok) { $('measure').textContent = ''; return }
+      const wide = r.textWidthMm > r.logoWidthMm * 2
+      $('measure').innerHTML =
+        `<b>${r.widthMm} × ${r.heightMm} mm</b> · el nombre ocupa ` +
+        `<span class="${wide ? 'wide' : ''}">${r.textWidthMm} mm</span>` +
+        (wide ? ` — sobresale bastante del logo (${r.logoWidthMm} mm), comprueba que quepa` : '')
+    } catch { $('measure').textContent = '' }
+  }, 200)
+}
+$('name').addEventListener('input', measure)
+
+// --- estado de la maquina -------------------------------------------------
+
+/** "hace 12 s" / "hace 4 min": un recuerdo se cuenta con su antigüedad. */
+function edad(ms) {
+  if (!Number.isFinite(ms)) return ''
+  const s = Math.round(ms / 1000)
+  if (s < 60) return `hace ${s} s`
+  const m = Math.round(s / 60)
+  return m < 60 ? `hace ${m} min` : `hace ${Math.round(m / 60)} h`
+}
+
+/** Lo que dice el sistema del cacharro, para explicar un "no conectado". */
+function textoMaquina(maq) {
+  if (!maq) return ''
+  if (maq.present === true) return `La máquina responde en el equipo${maq.port ? ` (${maq.port})` : ''}.`
+  if (maq.present === false) return 'No se detecta la máquina en el equipo: enciéndela y comprueba el cable USB.'
+  return ''
+}
+
+async function checkStatus() {
+  if (enabling) return
+  const dot = $('status').querySelector('.dot')
+  try {
+    const s = await (await fetch('/api/status')).json()
+    for (const id of ['liveFix', 'devFix', 'jobFix']) $(id).classList.add('hidden')
+    if (!TEMPLATES.length && s.templates) {
+      TEMPLATES = s.templates
+      current = s.defaultTemplate || TEMPLATES[0].id
+      renderTabs(); applyDefaults()
+    } else if (s.templates && s.templates.length !== TEMPLATES.length) {
+      // Alguien ha tocado plantillas.json a mano: se recoge sin recargar.
+      usarPlantillas(s.templates)
+    }
+    const dev = s.device || {}
+    const maq = s.machine || {}
+    // connected === null significa "no se puede saber desde esta pantalla de
+    // la app", no "no hay maquina". La comprobacion de verdad ocurre al grabar.
+    const unknown = dev.connected === null
+    deviceReady = Boolean(s.liveAvailable && s.projectApi?.present && (dev.connected === true || unknown))
+
+    if (s.liveAvailable && !s.projectApi?.present) {
+      dot.className = 'dot offline'
+      deviceReady = false
+      $('statusText').innerHTML = 'Depurador conectado, pero <code>window.Project</code> no responde.'
+    } else if (s.liveAvailable && (dev.enMarcha || dev.modo === 'vista-previa')) {
+      // La vista previa no es un trabajo con progreso: es un modo propio de la
+      // app, con su panel de "Salir de vista previa".
+      dot.className = 'dot offline'
+      deviceReady = false
+      const p = dev.enMarcha?.progreso ? ` · ${dev.enMarcha.progreso}` : ''
+      $('statusText').innerHTML = dev.modo === 'vista-previa'
+        ? '<b>Vista previa en marcha</b> · comprueba en la pieza dónde cae el contorno'
+        : `<b>La máquina está trabajando${p}</b> · espera a que termine antes de lanzar otra`
+      $('jobFix').classList.remove('hidden')
+    } else if (s.liveAvailable && dev.connected === true) {
+      dot.className = 'dot live'
+      $('statusText').innerHTML = `<b>${dev.deviceName}</b> conectada · lista para grabar`
+    } else if (s.liveAvailable && dev.connected === false) {
+      // La app pinta su boton rojo "Conecta el dispositivo": es un no rotundo.
+      dot.className = 'dot offline'
+      $('statusText').innerHTML = '<b>Design Space no tiene la máquina conectada.</b> Sin eso no se puede grabar.'
+      $('devFix').classList.remove('hidden')
+      $('devNote').textContent = textoMaquina(maq)
+    } else if (s.liveAvailable && unknown) {
+      // Fuera del lienzo la app no da el dato. Se dice lo que se sabe y desde
+      // cuándo, en vez de inventarse un verde o un rojo.
+      dot.className = dev.lastKnown?.connected === false ? 'dot offline' : 'dot live'
+      const fisica = textoMaquina(maq)
+      const previo = dev.lastKnown
+        ? `<b>${dev.lastKnown.deviceName || 'La máquina'}</b> ${dev.lastKnown.connected ? 'estaba conectada' : 'no estaba conectada'} ${edad(dev.lastKnown.haceMs)} · se confirma al abrir el diseño.`
+        : 'Modo en vivo activo · la conexión se confirma al abrir el diseño.'
+      $('statusText').innerHTML = previo + (fisica ? ` ${fisica}` : '')
+    } else if (s.liveAvailable) {
+      dot.className = 'dot offline'
+      $('statusText').innerHTML = 'Modo en vivo activo, pero no se pudo leer el estado de la máquina.'
+    } else {
+      dot.className = 'dot offline'
+      const app = s.app || {}
+      appRunning = Boolean(app.running)
+      $('statusText').innerHTML =
+        'Modo en vivo inactivo · se generan los proyectos, pero <b>no se puede grabar</b> desde aquí.'
+      $('liveFix').classList.remove('hidden')
+      $('btnLive').disabled = !s.canEnableLive
+      $('liveNote').textContent = !app.exeFound
+        ? 'No se encuentra LaserPecker Design Space instalada en este equipo.'
+        : app.running
+          ? 'Design Space está abierta sin el puerto de depuración. Al activarlo se cierra y se vuelve a abrir: guarda tu trabajo antes.'
+          : 'Design Space está cerrada. Se abrirá con el puerto de depuración ya puesto.'
+    }
+    // El registro y la cola viven en el mismo sondeo: quien esté grabando tiene
+    // que enterarse de que hay gente esperando sin abrir ningún panel.
+    if (s.registro) {
+      pintarRegistro(s.registro)
+      const q = s.registro.cola
+      $('loteResumen').textContent = q?.pendientes ? ` · ${q.pendientes} en cola` : ''
+      if ($('loteBox').open && q && q.pendientes !== COLA.filter((r) => r.estado === 'pendiente').length) cargarCola()
+    }
+  } catch {
+    dot.className = 'dot offline'
+    deviceReady = false
+    $('statusText').textContent = 'No se pudo consultar el estado del puente.'
+  }
+  updateButton()
+}
+
+function updateButton() {
+  const dry = $('dryRun').checked
+  $('btn').textContent = dry ? 'Generar y ensayar' : 'Generar y ver vista previa'
+  $('btn').classList.toggle('fire', !dry)
+  $('caution').classList.toggle('hidden', dry || !deviceReady)
+  $('caution').textContent = deviceReady
+    ? 'Primero se recorre el contorno sobre la pieza; el grabado no arranca hasta que lo confirmes.'
+    : ''
+}
+$('dryRun').addEventListener('change', updateButton)
+
+// --- activar el modo en vivo ----------------------------------------------
+// El puerto de depuración es un argumento de arranque, así que activarlo pasa
+// por reiniciar Design Space. Puede haber trabajo sin guardar, así que no se
+// hace sin que el usuario lo confirme aquí.
+
+$('btnLive').addEventListener('click', async () => {
+  if (appRunning && !confirm(
+    'Se va a cerrar y volver a abrir LaserPecker Design Space para abrir el puerto de depuración.\n\n' +
+    'Guarda tu trabajo antes de continuar. ¿Sigo?'
+  )) return
+
+  const b = $('btnLive')
+  enabling = true
+  b.disabled = true
+  b.textContent = 'Activando…'
+  $('liveNote').textContent = 'Reiniciando Design Space. Puede tardar hasta un minuto; no cierres esta página.'
+
+  try {
+    const r = await (await fetch('/api/live/enable', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ confirm: true, shortcut: $('mkShortcut').checked }),
+    })).json()
+
+    if (r.liveAvailable) {
+      show('ok', 'Modo en vivo activo', (r.mensaje || '') + (r.atajo ? ` Atajo creado: ${r.atajo}` : ''))
+    } else {
+      show('err', 'No se pudo activar el modo en vivo', r.mensaje || r.error || 'sin detalle')
+    }
+  } catch (err) {
+    show('err', 'No se pudo contactar el puente', err.message)
+  } finally {
+    enabling = false
+    b.disabled = false
+    b.textContent = 'Activar modo en vivo'
+    checkStatus()
+  }
+})
+
+checkStatus()
+setInterval(checkStatus, 8000)
+
+// --- generar y grabar -----------------------------------------------------
+
+// Paso 1: generar la pieza y lanzar la vista previa. El láser no graba aquí.
+$('f').addEventListener('submit', async (e) => {
+  e.preventDefault()
+  const name = $('name').value.trim().replace(/\s+/g, ' ')
+  if (!name) return show('err', 'Escribe un nombre.')
+
+  const dry = $('dryRun').checked
+  $('btn').disabled = true
+  $('btn').textContent = dry ? 'Comprobando…' : 'Lanzando vista previa…'
+
+  try {
+    const res = await fetch('/api/badges', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        names: [name],
+        template: current,
+        engrave: true,
+        preview: true,
+        dryRun: dry,
+        power: $('power').value,
+        depth: $('depth').value,
+        textPower: $('textPower').value,
+        textDepth: $('textDepth').value,
+      }),
+    })
+    renderOne(await res.json(), name)
+  } catch (err) {
+    show('err', `No se pudo contactar el puente: ${err.message}`)
+  } finally {
+    $('btn').disabled = false
+    updateButton()
+    if (!pendiente) $('name').focus()
+  }
+})
+
+function renderOne(data, name) {
+  $('list').innerHTML = ''
+  if (!data.ok) {
+    mostrarAcciones(null)
+    return show('err', data.error || data.failed?.[0]?.error || 'No se generó nada.')
+  }
+
+  const c = data.created[0]
+  const e = data.engrave
+  if (e?.ok && e.pendienteDeConfirmar) {
+    show('ok', `Vista previa de "${name}" en ${e.deviceName}`, data.hint)
+    pedirConfirmacion(c, e)
+  } else if (e?.ok && e.dryRun) show('ok', `Ensayo correcto para "${name}"`, data.hint)
+  else if (e?.ok && e.arranco) show('fire', `Grabando "${name}" en ${e.deviceName}`, data.hint)
+  else if (e?.ok) show('err', 'Se pulsó el botón pero no se confirmó el arranque', data.hint)
+  else if (e) show('err', `Se generó "${name}" pero no se grabó`, data.hint)
+  else show('ok', `Generado "${name}"`, data.hint)
+
+  const li = document.createElement('li')
+  li.append(Object.assign(document.createElement('span'), { textContent: `${c.name} · ${c.template}` }))
+  li.append(Object.assign(document.createElement('code'), { textContent: `${c.widthMm} × ${c.heightMm} mm` }))
+  $('list').append(li)
+
+  // La pieza existe: se puede abrir para ajustarla y se pueden guardar sus
+  // ajustes como plantilla, tanto si se grabó como si no.
+  mostrarAcciones(c)
+}
+
+// --- paso 2: confirmar la vista previa y grabar ----------------------------
+
+function pedirConfirmacion(c, e) {
+  pendiente = { id: c.id, name: c.name }
+  $('confirmDetail').innerHTML =
+    `Se está recorriendo el contorno de <b>${c.name}</b> (${c.widthMm} × ${c.heightMm} mm) en <b>${e.deviceName}</b>. ` +
+    'Si cae donde quieres, dale a continuar y se graba. Si no, cancela, recoloca la pieza y vuelve a generar.' +
+    '<br><br>Al continuar se sale de la vista previa y se acepta el aviso de parámetros de Design Space, ' +
+    'después de comprobar que coincidan con los de esta pieza.' +
+    (e.aviso ? `<br><br>La app avisa: “${e.aviso}”` : '') +
+    (e.previewing
+      ? ''
+      : '<br><br><b>Ojo:</b> no se detectó el panel de trabajo, así que puede que la vista previa no haya arrancado. Míralo en la máquina antes de continuar.')
+  $('fireBox').classList.add('hidden')
+  $('confirmBox').classList.remove('hidden')
+  $('btnGo').focus()
+}
+
+function cerrarConfirmacion() {
+  pendiente = null
+  $('confirmBox').classList.add('hidden')
+  $('fireBox').classList.remove('hidden')
+  updateButton()
+}
+
+$('btnGo').addEventListener('click', async () => {
+  if (!pendiente) return cerrarConfirmacion()
+  const { id, name } = pendiente
+  $('btnGo').disabled = true
+  $('btnCancel').disabled = true
+  $('btnGo').textContent = 'Grabando…'
+  try {
+    const r = await (await fetch('/api/engrave', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      // La vista previa se queda en marcha ocupando el panel: se detiene sola.
+      body: JSON.stringify({ id, name, confirm: true, stopPreview: true }),
+    })).json()
+
+    const params = r.verificacion?.pares?.map((p) => `${p.potencia}/${p.profundidad}`).join(' y ')
+    if (r.ok && r.arranco) {
+      show('fire', `Grabando "${name}" en ${r.deviceName}`,
+        (params ? `Parámetros confirmados: ${params} (potencia/profundidad). ` : '') +
+        'No abras la tapa ni muevas la pieza hasta que termine.')
+      $('name').value = ''
+      $('measure').textContent = ''
+    } else if (r.ok) {
+      show('err', 'Se pulsó Grabado láser pero no se confirmó el arranque', r.aviso || '')
+    } else if (r.stage === 'parametros') {
+      // Lo peor seria grabar con otra potencia: se cancela y se cuenta.
+      show('err', 'No se grabó: los parámetros no coinciden', r.error || '')
+    } else {
+      show('err', 'No se pudo grabar', r.error || 'sin detalle')
+    }
+  } catch (err) {
+    show('err', 'No se pudo contactar el puente', err.message)
+  } finally {
+    $('btnGo').disabled = false
+    $('btnCancel').disabled = false
+    $('btnGo').textContent = 'Continuar y grabar'
+    cerrarConfirmacion()
+    $('name').focus()
+  }
+})
+
+$('btnCancel').addEventListener('click', async () => {
+  const name = pendiente ? pendiente.name : null
+  $('btnCancel').disabled = true
+  try {
+    const r = await (await fetch('/api/stop', { method: 'POST' })).json()
+    show('ok', `Cancelado${name ? ` · "${name}"` : ''}`,
+      (r.yaParada ? 'No había nada en marcha. ' : 'Vista previa detenida. ') +
+      'La pieza queda generada en la galería de Design Space.')
+  } catch (err) {
+    show('err', 'No se pudo detener', err.message)
+  } finally {
+    $('btnCancel').disabled = false
+    cerrarConfirmacion()
+    $('name').focus()
+  }
+})
+
+// --- conectar la máquina y detener trabajos --------------------------------
+
+$('btnConnect').addEventListener('click', async () => {
+  const b = $('btnConnect')
+  b.disabled = true
+  b.textContent = 'Conectando…'
+  try {
+    const r = await (await fetch('/api/device/connect', { method: 'POST' })).json()
+    if (r.ok) show('ok', `Máquina conectada: ${r.deviceName}`, 'Ya se puede grabar desde aquí.')
+    else show('err', 'No se pudo conectar la máquina', r.error || 'sin detalle')
+  } catch (err) {
+    show('err', 'No se pudo contactar el puente', err.message)
+  } finally {
+    b.disabled = false
+    b.textContent = 'Conectar la máquina'
+    checkStatus()
+  }
+})
+
+$('btnStop').addEventListener('click', async () => {
+  const b = $('btnStop')
+  b.disabled = true
+  try {
+    const r = await (await fetch('/api/stop', { method: 'POST' })).json()
+    if (r.ok) show('ok', r.yaParada ? 'No había nada en marcha' : 'Detenido')
+    else show('err', 'No se pudo detener', r.error || 'sin detalle')
+  } catch (err) {
+    show('err', 'No se pudo contactar el puente', err.message)
+  } finally {
+    b.disabled = false
+    checkStatus()
+  }
+})
+
+// --- lote -----------------------------------------------------------------
+
+function batchNames() {
+  return $('names').value.split(/\r?\n|;/).map((n) => n.trim().replace(/\s+/g, ' ')).filter(Boolean)
+}
+$('names').addEventListener('input', () => {
+  const n = batchNames().length
+  $('count').textContent = n ? `${n} línea${n === 1 ? '' : 's'} (los repetidos se descartan)` : 'Ningún nombre todavía'
+})
+
+$('btnBatch').addEventListener('click', async () => {
+  const names = batchNames()
+  if (!names.length) return show('err', 'Escribe al menos un nombre en el lote.')
+  $('btnBatch').disabled = true
+  $('btnBatch').textContent = `Generando ${names.length}…`
+  try {
+    const res = await fetch('/api/badges', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        names, template: current,
+        power: $('power').value, depth: $('depth').value,
+        textPower: $('textPower').value, textDepth: $('textDepth').value,
+      }),
+    })
+    renderBatch(await res.json())
+  } catch (err) {
+    show('err', `No se pudo contactar el puente: ${err.message}`)
+  } finally {
+    $('btnBatch').disabled = false
+    $('btnBatch').textContent = 'Generar el lote'
+  }
+})
+
+function renderBatch(data) {
+  if (!data.ok) {
+    mostrarAcciones(null)
+    return show('err', data.error || 'No se generó ninguna pieza.')
+  }
+  const n = data.createdCount
+  const dup = data.duplicatesIgnored?.length
+  const sinTurno = data.turnosNoEncontrados?.length
+  show('ok', `${n} pieza${n === 1 ? '' : 's'} generada${n === 1 ? '' : 's'}`,
+    (dup ? `${dup} repetido${dup === 1 ? '' : 's'} descartado${dup === 1 ? '' : 's'}. ` : '') +
+    (sinTurno ? `${sinTurno} turno(s) ya no estaban en la cola. ` : '') + (data.hint || ''))
+  const list = $('list')
+  list.innerHTML = ''
+  for (const c of data.created) {
+    const li = document.createElement('li')
+    // Con el turno delante: es el número que esa persona tiene en la mano.
+    li.append(Object.assign(document.createElement('span'), {
+      textContent: c.turno != null ? `#${c.turno}  ${c.name}` : c.name,
+    }))
+    li.append(Object.assign(document.createElement('code'), {
+      textContent: `${c.widthMm} × ${c.heightMm} mm${c.galleryRegistered ? '' : ' · no entró en la galería'}`,
+    }))
+    if (!c.galleryRegistered) li.className = 'bad'
+    list.append(li)
+  }
+  for (const f of data.failed || []) {
+    const li = document.createElement('li')
+    li.className = 'bad'
+    li.append(Object.assign(document.createElement('span'), { textContent: f.name }))
+    li.append(Object.assign(document.createElement('code'), { textContent: f.error }))
+    list.append(li)
+  }
+  // En un lote las acciones apuntan a la última pieza creada.
+  mostrarAcciones(data.created[data.created.length - 1] || null)
+}
+
+// --- acciones sobre la pieza recién generada -------------------------------
+
+// Última pieza creada: es a la que se refieren "Realizar proyecto" y el guardado
+// de plantilla.
+let ultimo = null
+
+function mostrarAcciones(c) {
+  ultimo = c ? { id: c.id, name: c.name, template: c.template || current } : null
+  $('acciones').classList.toggle('hidden', !ultimo)
+  if (!ultimo) return
+
+  const t = tpl()
+  const base = TEMPLATES.find((x) => x.id === (t?.base || t?.id))
+  $('tplHint').innerHTML =
+    `Guardará estos ajustes: <b>${$('power').value}/${$('depth').value}</b> el logo y ` +
+    `<b>${$('textPower').value}/${$('textDepth').value}</b> el nombre` +
+    (base ? `, con la geometría y la fuente de <b>${base.label}</b>.` : '.') +
+    ' Aparecerá como una pestaña más.'
+  if (!$('tplName').value) $('tplName').value = `${t?.label || 'Plantilla'} ajustado`
+}
+
+$('btnAbrir').addEventListener('click', async () => {
+  if (!ultimo) return
+  const b = $('btnAbrir')
+  b.disabled = true
+  b.textContent = 'Abriendo…'
+  try {
+    const r = await (await fetch('/api/open', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: ultimo.id, name: ultimo.name }),
+    })).json()
+    if (r.ok) {
+      show('ok', `"${ultimo.name}" abierto en Design Space`,
+        r.alFrente ? 'La app está delante, lista para ajustar el diseño.' : 'Cambia a la ventana de Design Space para ajustarlo.')
+    } else {
+      show('err', 'No se pudo abrir el proyecto', r.error || 'sin detalle')
+    }
+  } catch (err) {
+    show('err', 'No se pudo contactar el puente', err.message)
+  } finally {
+    b.disabled = false
+    b.textContent = 'Realizar proyecto'
+  }
+})
+
+$('btnTpl').addEventListener('click', async () => {
+  const label = $('tplName').value.trim()
+  if (!label) return show('err', 'Ponle un nombre a la plantilla.')
+
+  const t = tpl()
+  const b = $('btnTpl')
+  b.disabled = true
+  b.textContent = 'Guardando…'
+  try {
+    const r = await (await fetch('/api/templates', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        label,
+        // Una plantilla propia siempre cuelga de una base: si la actual ya es
+        // propia, se hereda su misma base, no se anida.
+        base: t?.base || t?.id || current,
+        material: t?.material,
+        logoPower: $('power').value,
+        logoDepth: $('depth').value,
+        textPower: $('textPower').value,
+        textDepth: $('textDepth').value,
+      }),
+    })).json()
+
+    if (!r.ok) return show('err', 'No se pudo guardar la plantilla', r.error || '')
+    usarPlantillas(r.templates)
+    current = r.id
+    renderTabs()
+    applyDefaults()
+    $('tplBox').open = false
+    show('ok', `Plantilla "${r.label}" ${r.actualizada ? 'actualizada' : 'guardada'}`,
+      'Ya está seleccionada arriba; la próxima vez basta con elegirla.')
+  } catch (err) {
+    show('err', 'No se pudo contactar el puente', err.message)
+  } finally {
+    b.disabled = false
+    b.textContent = 'Guardar plantilla'
+  }
+})
+
+// --- registro por QR ------------------------------------------------------
+//
+// El puesto de registro es otro servidor, abierto a la red local a propósito y
+// solo cuando alguien lo pide aquí. Este panel es su interruptor.
+
+let REGISTRO = { activo: false, urls: [] }
+let urlElegida = null
+
+function pintarRegistro(est) {
+  REGISTRO = est || { activo: false, urls: [] }
+  const activo = Boolean(REGISTRO.activo)
+  $('btnQr').textContent = activo ? 'Cerrar el registro' : 'Abrir el registro'
+  $('btnQr').classList.toggle('quiet', activo)
+  $('qrCaja').classList.toggle('hidden', !activo)
+  $('btnQrOtra').classList.toggle('hidden', !(REGISTRO.urls?.length > 1))
+
+  if (!activo) {
+    $('qrEstado').textContent = 'cerrado · nadie puede apuntarse'
+    urlElegida = null
+    return
+  }
+
+  if (!urlElegida || !REGISTRO.urls.includes(urlElegida)) urlElegida = REGISTRO.urls[0]
+  $('qrEstado').textContent = 'abierto · la gente ya puede escanear'
+  $('qrUrl').textContent = urlElegida
+  // Solo si cambia: el estado se sondea cada pocos segundos y reasignar el src
+  // haría parpadear el código en pantalla.
+  const src = `/api/registro/qr.svg?escala=8&url=${encodeURIComponent(urlElegida)}`
+  if (!$('qrImg').src.endsWith(src)) $('qrImg').src = src
+  $('qrNota').textContent =
+    'El teléfono tiene que estar en el mismo wifi que este equipo. Si el wifi separa a los invitados entre sí, no llegará.'
+}
+
+async function cargarRegistro() {
+  try {
+    const r = await (await fetch('/api/registro')).json()
+    pintarRegistro(r)
+  } catch {}
+}
+
+$('btnQr').addEventListener('click', async () => {
+  const b = $('btnQr')
+  const cerrando = REGISTRO.activo
+  if (!cerrando && !confirm(
+    'Se va a abrir el formulario de registro para toda la red local (el wifi al que esté conectado este equipo).\n\n' +
+    'Solo se comparte esa página: el resto del puente sigue siendo solo de este equipo. ¿Lo abro?'
+  )) return
+
+  b.disabled = true
+  b.textContent = cerrando ? 'Cerrando…' : 'Abriendo…'
+  try {
+    const r = await (await fetch(cerrando ? '/api/registro/stop' : '/api/registro/start', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ confirm: true }),
+    })).json()
+
+    if (!r.ok) show('err', 'No se pudo abrir el registro', r.error || 'sin detalle')
+    else if (!cerrando) show('ok', 'Registro abierto', `Enseña el QR: ${r.url}`)
+    else show('ok', 'Registro cerrado', 'La cola se conserva; solo deja de aceptar gente nueva.')
+    pintarRegistro(r.activo !== undefined ? r : await (await fetch('/api/registro')).json())
+  } catch (err) {
+    show('err', 'No se pudo contactar el puente', err.message)
+  } finally {
+    b.disabled = false
+    cargarCola()
+  }
+})
+
+$('btnQrOtra').addEventListener('click', () => {
+  // Con varias tarjetas de red (wifi + VPN) la primera puede no ser la buena.
+  const i = REGISTRO.urls.indexOf(urlElegida)
+  urlElegida = REGISTRO.urls[(i + 1) % REGISTRO.urls.length]
+  pintarRegistro(REGISTRO)
+})
+
+$('btnQrPrint').addEventListener('click', () => {
+  if (!urlElegida) return
+  const w = window.open('', '_blank', 'width=620,height=800')
+  if (!w) return show('err', 'El navegador bloqueó la ventana de impresión')
+  const src = `${location.origin}/api/registro/qr.svg?escala=10&url=${encodeURIComponent(urlElegida)}`
+  w.document.write(
+    `<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><title>Cartel de registro</title><style>
+      body { font: 16px/1.5 system-ui, sans-serif; text-align: center; padding: 2.5rem 1.5rem; color: #111; background: #fff; }
+      h1 { font-size: 2rem; margin: 0 0 .3rem; }
+      p.sub { color: #555; margin: 0 0 2rem; font-size: 1.1rem; }
+      img { width: 340px; height: 340px; }
+      .url { font-family: ui-monospace, Consolas, monospace; margin-top: 1.5rem; font-size: 1rem; color: #333; }
+      @media print { @page { margin: 1.5cm; } }
+    </style></head><body>
+      <h1>Regístrate y llévate tu grabado</h1>
+      <p class="sub">Escanea el código con la cámara de tu teléfono</p>
+      <img src="${src}" alt="Código QR">
+      <p class="url">${urlElegida}</p>
+      <script>addEventListener('load', () => setTimeout(() => print(), 300))<\/script>
+    </body></html>`
+  )
+  w.document.close()
+})
+
+// --- la cola --------------------------------------------------------------
+
+let COLA = []
+let RESUMEN_COLA = { pendientes: 0, hechos: 0 }
+let verHechos = false
+
+function pintarCola() {
+  const lista = $('colaLista')
+  lista.innerHTML = ''
+  const pendientes = COLA.filter((r) => r.estado === 'pendiente')
+  $('colaCuenta').textContent = pendientes.length ? `(${pendientes.length})` : ''
+  // Sin nadie esperando no es lo mismo "todavía no ha venido nadie" que "ya
+  // están todas hechas": lo segundo es el final feliz, no un panel vacío.
+  $('colaVacia').textContent = RESUMEN_COLA.hechos
+    ? `No queda nadie esperando · ${RESUMEN_COLA.hechos} placa${RESUMEN_COLA.hechos === 1 ? '' : 's'} ya generada${RESUMEN_COLA.hechos === 1 ? '' : 's'}`
+    : 'Nadie se ha registrado todavía.'
+  $('colaVacia').classList.toggle('hidden', COLA.length > 0)
+  lista.classList.toggle('hidden', COLA.length === 0)
+  $('btnColaGen').disabled = pendientes.length === 0
+
+  for (const r of COLA) {
+    const hecho = r.estado === 'hecho'
+    const fila = document.createElement('div')
+    fila.className = 'fila' + (hecho ? ' guardada' : '')
+
+    const chk = document.createElement('input')
+    chk.type = 'checkbox'
+    chk.checked = !hecho
+    chk.disabled = hecho
+    chk.dataset.turno = r.turno
+    fila.append(chk)
+
+    const turno = document.createElement('span')
+    turno.className = 'turno'
+    turno.textContent = '#' + r.turno
+    fila.append(turno)
+
+    // textContent y no innerHTML: esto lo escribió alguien desde su teléfono.
+    const quien = document.createElement('span')
+    quien.className = 'quien'
+    const b = document.createElement('b')
+    b.textContent = r.nombre
+    const small = document.createElement('small')
+    small.textContent = `${r.celular || ''}${r.celular && r.correo ? ' · ' : ''}${r.correo || ''}`
+    quien.append(b, small)
+    fila.append(quien)
+
+    if (hecho) {
+      const tag = document.createElement('span')
+      tag.className = 'tag'
+      tag.textContent = 'generada'
+      fila.append(tag)
+    }
+    lista.append(fila)
+  }
+  $('btnColaVer').textContent = verHechos ? 'ver solo las pendientes' : 'ver las ya generadas'
+}
+
+function turnosMarcados() {
+  return [...$('colaLista').querySelectorAll('input:checked')].map((i) => Number(i.dataset.turno))
+}
+
+async function cargarCola() {
+  try {
+    const r = await (await fetch(`/api/queue${verHechos ? '?todo=1' : ''}`)).json()
+    COLA = r.registros || []
+    RESUMEN_COLA = r.resumen || RESUMEN_COLA
+    pintarCola()
+    if (r.registro) pintarRegistro(r.registro)
+  } catch {}
+}
+
+$('btnColaVer').addEventListener('click', () => {
+  verHechos = !verHechos
+  cargarCola()
+})
+
+$('btnColaGen').addEventListener('click', async () => {
+  const turnos = turnosMarcados()
+  if (!turnos.length) return show('err', 'Marca al menos a una persona de la cola.')
+
+  const b = $('btnColaGen')
+  b.disabled = true
+  b.textContent = `Generando ${turnos.length}…`
+  try {
+    const data = await (await fetch('/api/badges', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        turnos, template: current,
+        power: $('power').value, depth: $('depth').value,
+        textPower: $('textPower').value, textDepth: $('textDepth').value,
+      }),
+    })).json()
+    renderBatch(data)
+  } catch (err) {
+    show('err', `No se pudo contactar el puente: ${err.message}`)
+  } finally {
+    b.disabled = false
+    b.textContent = 'Generar las seleccionadas'
+    cargarCola()
+    cargarGaleria()
+  }
+})
+
+$('btnColaQuitar').addEventListener('click', async () => {
+  const turnos = turnosMarcados()
+  if (!turnos.length) return show('err', 'Marca a quién quieres quitar de la cola.')
+  if (!confirm(`¿Quitar ${turnos.length} registro(s) de la cola? No se genera ninguna placa.`)) return
+  try {
+    const r = await (await fetch('/api/queue', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ turnos }),
+    })).json()
+    COLA = r.registros.filter((x) => verHechos || x.estado === 'pendiente')
+    RESUMEN_COLA = r.resumen || RESUMEN_COLA
+    pintarCola()
+    show('ok', `${r.quitados} registro(s) fuera de la cola`)
+  } catch (err) {
+    show('err', 'No se pudo contactar el puente', err.message)
+  }
+})
+
+$('btnColaVaciar').addEventListener('click', async () => {
+  if (!confirm('¿Vaciar la cola entera?\n\nSe borran los datos de todo el mundo, tanto los pendientes como los ya generados. Los números de turno siguen donde iban.')) return
+  try {
+    const r = await (await fetch('/api/queue', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ todo: true }),
+    })).json()
+    COLA = []
+    RESUMEN_COLA = r.resumen || { pendientes: 0, hechos: 0 }
+    pintarCola()
+    show('ok', `Cola vacía (${r.borrados} registro(s) borrados)`)
+  } catch (err) {
+    show('err', 'No se pudo contactar el puente', err.message)
+  }
+})
+
+// --- vaciar la galería ----------------------------------------------------
+//
+// Lo que se borra son las placas generadas. Los formatos de los que salen las
+// plantillas se reconocen porque viven fuera de la carpeta de proyectos, y se
+// listan aparte y desmarcados: para llevarse uno hay que marcarlo a mano.
+
+let GALERIA = { placas: [], plantillas: [] }
+
+function pintarGaleria() {
+  const lista = $('galeriaLista')
+  lista.innerHTML = ''
+  const total = GALERIA.placas.length + GALERIA.plantillas.length
+
+  $('galeriaResumen').innerHTML = total
+    ? `<b>${GALERIA.placas.length}</b> placa${GALERIA.placas.length === 1 ? '' : 's'} generada${GALERIA.placas.length === 1 ? '' : 's'}` +
+      (GALERIA.plantillas.length
+        ? ` · <b>${GALERIA.plantillas.length}</b> plantilla${GALERIA.plantillas.length === 1 ? '' : 's'} que se conserva${GALERIA.plantillas.length === 1 ? '' : 'n'}`
+        : '')
+    : 'La galería está vacía.'
+  lista.classList.toggle('hidden', total === 0)
+
+  const fila = (p, marcada, etiqueta) => {
+    const el = document.createElement('div')
+    el.className = 'fila'
+    const chk = document.createElement('input')
+    chk.type = 'checkbox'
+    chk.checked = marcada
+    chk.dataset.id = p.id
+    el.append(chk)
+
+    const quien = document.createElement('span')
+    quien.className = 'quien'
+    const b = document.createElement('b')
+    b.textContent = p.nombre
+    const small = document.createElement('small')
+    small.textContent = `${p.widthMm} × ${p.heightMm} mm${p.motivo ? ' · ' + p.motivo : ''}`
+    quien.append(b, small)
+    el.append(quien)
+
+    if (etiqueta) {
+      const tag = document.createElement('span')
+      tag.className = 'tag'
+      tag.textContent = etiqueta
+      el.append(tag)
+    }
+    lista.append(el)
+  }
+
+  for (const p of GALERIA.placas) fila(p, true, null)
+  for (const p of GALERIA.plantillas) fila(p, false, 'plantilla')
+  $('btnVaciar').disabled = GALERIA.placas.length === 0
+  $('btnVaciar').textContent = GALERIA.placas.length
+    ? `Eliminar ${GALERIA.placas.length} proyecto${GALERIA.placas.length === 1 ? '' : 's'}`
+    : 'No hay nada que eliminar'
+}
+
+async function cargarGaleria() {
+  try {
+    const r = await (await fetch('/api/projects')).json()
+    GALERIA = { placas: r.placas || [], plantillas: r.plantillas || [] }
+    pintarGaleria()
+  } catch {
+    $('galeriaResumen').textContent = 'No se pudo leer la galería.'
+  }
+}
+
+$('btnGaleriaRecargar').addEventListener('click', cargarGaleria)
+
+$('btnVaciar').addEventListener('click', async () => {
+  const ids = [...$('galeriaLista').querySelectorAll('input:checked')].map((i) => i.dataset.id)
+  if (!ids.length) return show('err', 'No hay ningún proyecto marcado.')
+
+  const plantillasMarcadas = GALERIA.plantillas.filter((p) => ids.includes(p.id))
+  const archivos = $('borrarArchivos').checked
+  if (!confirm(
+    `Se van a eliminar ${ids.length} proyecto(s) de la galería.\n\n` +
+    (plantillasMarcadas.length
+      ? `OJO: entre ellos hay ${plantillasMarcadas.length} plantilla(s): ${plantillasMarcadas.map((p) => p.nombre).join(', ')}.\n\n`
+      : `Las ${GALERIA.plantillas.length} plantilla(s) se conservan.\n\n`) +
+    (archivos
+      ? 'También se borrarán los archivos .lp2 del disco: esto NO se puede deshacer.'
+      : 'Van a la papelera de Design Space y se pueden restaurar desde la app.') +
+    '\n\n¿Sigo?'
+  )) return
+
+  const b = $('btnVaciar')
+  b.disabled = true
+  b.textContent = 'Eliminando…'
+  try {
+    const r = await (await fetch('/api/projects', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ confirm: true, ids, borrarArchivos: archivos }),
+    })).json()
+
+    if (r.ok) show('ok', `${r.borrados} proyecto(s) eliminados`, r.hint)
+    else show('err', 'No se pudo vaciar la galería', r.error || r.hint || 'sin detalle')
+  } catch (err) {
+    show('err', 'No se pudo contactar el puente', err.message)
+  } finally {
+    b.disabled = false
+    $('borrarArchivos').checked = false
+    cargarGaleria()
+  }
+})
+
+// Las listas se cargan al abrir su panel, no antes: son dos consultas que no
+// hacen falta para grabar, que es a lo que se viene.
+$('loteBox').addEventListener('toggle', () => { if ($('loteBox').open) cargarCola() })
+$('galeriaBox').addEventListener('toggle', () => { if ($('galeriaBox').open) cargarGaleria() })
+
+// --- salida ---------------------------------------------------------------
+
+function show(kind, message, detail) {
+  $('out').classList.add('show')
+  $('msg').className = 'msg ' + kind
+  $('msg').textContent = (kind === 'err' ? '✗ ' : kind === 'fire' ? '🔥 ' : '✓ ') + message
+  if (detail) $('msg').append(Object.assign(document.createElement('small'), { textContent: detail }))
+  if (kind === 'err') $('list').innerHTML = ''
+}
+</script>
+</body>
+</html>
