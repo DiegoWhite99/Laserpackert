@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Divergency Grabadora Láser — un grabado por cada nombre de tu lista</title>
+<meta name="description" content="Pega una lista de nombres y crea un proyecto de LaserPecker Design Space por persona, con el logo fijo y el nombre centrado. Vista previa sobre la pieza y grabado desde el navegador. Windows, un solo .exe." />
+<link rel="icon" href="logo.png" />
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #fff; --panel2: #fbfcfd; --border: #dfe3e8; --text: #14181d;
+    --muted: #6b7480; --accent: #f5a623; --accent-ink: #2b1d00;
+    --ok: #1c7c48; --err: #b3261e; --warn: #b06a00;
+    --code-bg: #f0f2f5; --logo-bg: #fff; --fire: #d1401f;
+    --shadow: 0 1px 2px rgba(20,24,29,.05), 0 12px 32px -12px rgba(20,24,29,.18);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14171b; --panel: #1c2025; --panel2: #191d22; --border: #2e343b; --text: #e8eaed;
+      --muted: #98a1ac; --accent: #f5a623; --accent-ink: #2b1d00;
+      --ok: #5cc98e; --err: #f2837b; --warn: #e0a458;
+      --code-bg: #12151a; --logo-bg: #e8eaed; --fire: #f2643c;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 16px 40px -16px rgba(0,0,0,.7);
+    }
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 0 1.25rem; }
+  a { color: inherit; }
+  code, kbd {
+    font-family: ui-monospace, Consolas, monospace; font-size: .86em;
+    background: var(--code-bg); padding: .12rem .34rem; border-radius: 4px;
+  }
+  h2 { font-size: 1.45rem; letter-spacing: -.02em; margin: 0 0 .4rem; }
+  h3 { font-size: 1rem; margin: 0 0 .3rem; }
+  .lede { color: var(--muted); margin: 0 0 1.8rem; max-width: 62ch; }
+  section { padding: 3.4rem 0; border-top: 1px solid var(--border); }
+
+  /* --- cabecera --- */
+  header {
+    position: sticky; top: 0; z-index: 10; background: color-mix(in srgb, var(--bg) 88%, transparent);
+    backdrop-filter: blur(8px); border-bottom: 1px solid var(--border);
+  }
+  header .wrap { display: flex; align-items: center; gap: 1rem; height: 58px; }
+  .brand { display: flex; align-items: center; gap: .6rem; font-weight: 700; letter-spacing: -.01em; }
+  /* El logo es azul muy oscuro sobre fondo transparente: en modo oscuro se
+     perderia contra el fondo, asi que va sobre su propia placa clara. */
+  .brand img { height: 20px; width: auto; display: block; background: var(--logo-bg); padding: .2rem .32rem; border-radius: 5px; }
+  header nav { margin-left: auto; display: flex; gap: 1.2rem; font-size: .88rem; }
+  header nav a { color: var(--muted); text-decoration: none; }
+  header nav a:hover { color: var(--text); }
+  @media (max-width: 640px) { header nav { display: none; } }
+
+  /* --- hero --- */
+  .hero { padding: 4rem 0 3.4rem; }
+  .hero .grid { display: grid; grid-template-columns: 1.05fr .95fr; gap: 3rem; align-items: center; }
+  @media (max-width: 820px) { .hero .grid { grid-template-columns: 1fr; gap: 2.4rem; } }
+  .tag {
+    display: inline-flex; align-items: center; gap: .45rem; font-size: .76rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .06em; color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 14%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+    padding: .3rem .6rem; border-radius: 999px; margin-bottom: 1.1rem;
+  }
+  h1 { font-size: clamp(2rem, 5vw, 2.9rem); line-height: 1.1; letter-spacing: -.03em; margin: 0 0 .9rem; }
+  h1 em { font-style: normal; color: var(--accent); }
+  .hero p.sub { font-size: 1.06rem; color: var(--muted); margin: 0 0 1.9rem; max-width: 46ch; }
+
+  .cta { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+  .btn {
+    display: inline-flex; align-items: center; gap: .6rem; text-decoration: none;
+    background: var(--accent); color: var(--accent-ink); font-weight: 800; font-size: 1.02rem;
+    padding: .95rem 1.4rem; border-radius: 10px; border: 0; cursor: pointer;
+    box-shadow: 0 6px 18px -8px color-mix(in srgb, var(--accent) 70%, transparent);
+  }
+  .btn:hover { filter: brightness(1.07); }
+  .btn.ghost { background: transparent; color: var(--text); border: 1px solid var(--border); box-shadow: none; font-weight: 600; }
+  .btn svg { flex: 0 0 auto; }
+  .meta { font-size: .82rem; color: var(--muted); margin-top: .9rem; }
+  .meta b { color: var(--text); font-weight: 600; }
+  .meta .sep { opacity: .5; margin: 0 .45rem; }
+
+  /* --- maqueta de la ventana --- */
+  .shot { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow); overflow: hidden; }
+  .shot .bar { display: flex; align-items: center; gap: .5rem; padding: .55rem .7rem; border-bottom: 1px solid var(--border); background: var(--panel2); }
+  .shot .dots { display: flex; gap: .3rem; }
+  .shot .dots i { width: 9px; height: 9px; border-radius: 50%; background: var(--border); display: block; }
+  .shot .url {
+    flex: 1; font-family: ui-monospace, Consolas, monospace; font-size: .72rem; color: var(--muted);
+    background: var(--bg); border: 1px solid var(--border); border-radius: 5px; padding: .18rem .45rem;
+  }
+  .shot .body { padding: 1rem 1.1rem 1.2rem; }
+  .shot .live { display: flex; align-items: center; gap: .45rem; font-size: .76rem; color: var(--muted); margin-bottom: .9rem; }
+  .shot .live i { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 25%, transparent); }
+  .shot .tabs { display: grid; grid-template-columns: 1fr 1fr; gap: .4rem; margin-bottom: .9rem; }
+  .shot .tab { border: 1px solid var(--border); border-radius: 8px; padding: .45rem; text-align: center; font-size: .78rem; font-weight: 600; }
+  .shot .tab.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent); }
+  .shot .tab small { display: block; font-weight: 400; font-size: .68rem; color: var(--muted); }
+  .shot .lbl { font-size: .74rem; font-weight: 600; margin-bottom: .3rem; }
+  .shot .names {
+    border: 1px solid var(--border); border-radius: 7px; background: var(--bg); padding: .55rem .65rem;
+    font-family: ui-monospace, Consolas, monospace; font-size: .78rem; line-height: 1.8; color: var(--text);
+  }
+  .shot .names span { display: block; }
+  .shot .names span:last-child { color: var(--muted); }
+  .shot .go { margin-top: .8rem; background: var(--accent); color: var(--accent-ink); text-align: center; font-weight: 800; font-size: .86rem; padding: .7rem; border-radius: 8px; }
+  .shot .foot { margin-top: .7rem; font-size: .74rem; color: var(--ok); font-weight: 600; }
+
+  /* --- flujo --- */
+  .flow { display: grid; grid-template-columns: repeat(4, 1fr); gap: .6rem; align-items: stretch; }
+  @media (max-width: 760px) { .flow { grid-template-columns: 1fr; } }
+  .step {
+    position: relative; background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: .95rem 1rem; font-size: .87rem;
+  }
+  .step b { display: block; font-size: .92rem; margin-bottom: .2rem; }
+  .step span { color: var(--muted); }
+  .step code { font-size: .78rem; }
+  .step::after {
+    content: "→"; position: absolute; right: -.52rem; top: 50%; transform: translateY(-50%);
+    color: var(--accent); font-weight: 700; font-size: .95rem; background: var(--bg); padding: 0 .1rem; line-height: 1;
+  }
+  .step:last-child::after { content: none; }
+  @media (max-width: 760px) {
+    .step::after { content: "↓"; right: 50%; top: auto; bottom: -.75rem; transform: translateX(50%); }
+  }
+  .why { margin-top: 1.4rem; padding: 1rem 1.15rem; border-left: 3px solid var(--accent); background: var(--panel2); border-radius: 0 8px 8px 0; font-size: .9rem; color: var(--muted); }
+  .why b { color: var(--text); }
+
+  /* --- pasos numerados --- */
+  ol.pasos { list-style: none; counter-reset: p; padding: 0; margin: 0; display: grid; gap: .8rem; }
+  ol.pasos li { counter-increment: p; display: grid; grid-template-columns: 30px 1fr; gap: .9rem; align-items: start; }
+  ol.pasos li::before {
+    content: counter(p); width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center;
+    background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--accent);
+    border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent); font-weight: 800; font-size: .85rem;
+  }
+  /* Solo el titulo del paso ocupa su linea: los <b> de dentro del texto tienen
+     que seguir siendo parte de la frase. */
+  ol.pasos li > div > b { display: block; }
+  ol.pasos span { color: var(--muted); font-size: .92rem; }
+
+  /* --- tarjetas --- */
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: .9rem; }
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 11px; padding: 1.15rem 1.2rem; }
+  .card p { margin: 0; color: var(--muted); font-size: .9rem; }
+  .card .ico { font-size: 1.1rem; line-height: 1; margin-bottom: .55rem; display: block; }
+
+  /* --- avisos --- */
+  .note { border-radius: 10px; padding: 1.15rem 1.25rem; border: 1px solid var(--border); background: var(--panel); }
+  .note.warn { border-color: color-mix(in srgb, var(--warn) 45%, var(--border)); background: color-mix(in srgb, var(--warn) 8%, var(--panel)); }
+  .note h3 { color: var(--warn); }
+  .note.warn p, .note p { font-size: .92rem; }
+  .note p:last-child { margin-bottom: 0; }
+  /* Un sha256 son 64 caracteres sin un solo espacio: sin esto se sale de la tarjeta. */
+  .note code { word-break: break-all; }
+  .pill { display: inline-block; font-size: .78rem; font-weight: 700; padding: .12rem .5rem; border-radius: 5px; background: var(--code-bg); }
+
+  .hash { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; margin-top: .8rem; }
+  .hash code { word-break: break-all; font-size: .74rem; padding: .35rem .5rem; }
+  .hash button { font: inherit; font-size: .78rem; font-weight: 600; padding: .3rem .6rem; border-radius: 6px; border: 1px solid var(--border); background: var(--panel); color: var(--text); cursor: pointer; }
+  .hash button:hover { border-color: var(--accent); }
+
+  table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+  table th, table td { text-align: left; padding: .55rem .7rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+  table th { color: var(--muted); font-weight: 600; width: 38%; }
+  table tr:last-child td, table tr:last-child th { border-bottom: 0; }
+  .tableWrap { overflow-x: auto; background: var(--panel); border: 1px solid var(--border); border-radius: 11px; }
+
+  ul.limits { margin: 0; padding-left: 1.15rem; color: var(--muted); font-size: .92rem; }
+  ul.limits li { margin-bottom: .45rem; }
+  ul.limits b { color: var(--text); }
+
+  details.faq { border: 1px solid var(--border); border-radius: 9px; padding: .8rem 1rem; background: var(--panel); margin-bottom: .6rem; }
+  details.faq summary { cursor: pointer; font-weight: 600; font-size: .95rem; }
+  details.faq p { margin: .7rem 0 0; color: var(--muted); font-size: .92rem; }
+  details.faq p:last-child { margin-bottom: 0; }
+
+  /* --- descarga final --- */
+  .final { text-align: center; padding: 4rem 0; }
+  .final h2 { font-size: 1.8rem; }
+  .final .cta { justify-content: center; }
+  footer { border-top: 1px solid var(--border); padding: 2rem 0 3rem; color: var(--muted); font-size: .85rem; }
+  footer .row { display: flex; gap: 1.2rem; flex-wrap: wrap; align-items: center; }
+  footer .row .right { margin-left: auto; }
+  @media (max-width: 640px) { footer .row .right { margin-left: 0; } }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <span class="brand"><img src="logo.png" alt="Divergency AI" />Placas</span>
+    <nav>
+      <a href="#como">Cómo funciona</a>
+      <a href="#pasos">Empezar</a>
+      <a href="#requisitos">Requisitos</a>
+      <a href="#descargar">Descargar</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+
+<div class="hero wrap">
+  <div class="grid">
+    <div>
+      <span class="tag">Windows · un solo archivo</span>
+      <h1>Un grabado por cada <em>nombre de tu lista</em>.</h1>
+      <p class="sub">
+        Pegas la lista. Se crea un proyecto de LaserPecker Design Space por persona
+        —logo fijo, nombre centrado debajo— y aparecen en la galería al instante.
+        La vista previa y el grabado también salen de la misma página.
+      </p>
+      <div class="cta">
+        <!--
+          El ejecutable son 92 MB y no vive en el repositorio: va como release
+          asset, que es lo que GitHub tiene pensado para binarios. Este enlace
+          apunta siempre a la última publicada, así que no hay que tocarlo al
+          sacar una versión nueva.
+        -->
+        <a class="btn" id="descargar" href="https://github.com/DiegoWhite99/Laserpackert/releases/latest/download/DivergencyGrabadoraLaser.exe">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 3v12m0 0l-4.5-4.5M12 15l4.5-4.5M4 20h16" />
+          </svg>
+          Descargar para Windows
+        </a>
+        <a class="btn ghost" href="#como">Ver cómo funciona</a>
+      </div>
+      <p class="meta">
+        <b id="mVersion">v1.0.0</b><span class="sep">·</span><b id="mTamano">~91 MB</b><span class="sep">·</span>Windows 10/11 (64 bits)
+        <br />Sin instalación y sin Node: se abre y ya está.
+      </p>
+    </div>
+
+    <div class="shot" aria-hidden="true">
+      <div class="bar">
+        <span class="dots"><i></i><i></i><i></i></span>
+        <span class="url">127.0.0.1:7788</span>
+      </div>
+      <div class="body">
+        <div class="live"><i></i> Modo en vivo activo · LP2P-C1 conectada</div>
+        <div class="tabs">
+          <div class="tab on">Esfero<small>Óxido de aluminio</small></div>
+          <div class="tab">Placa<small>Cartulina</small></div>
+        </div>
+        <div class="lbl">Nombres (uno por línea)</div>
+        <div class="names">
+          <span>Viviana Jimenez</span>
+          <span>Diego Castelblanco</span>
+          <span>Jarvey Rodríguez</span>
+          <span>│</span>
+        </div>
+        <div class="go">Generar y ver vista previa</div>
+        <div class="foot">3 piezas · 41.72 × 26.51 mm · listas en la galería</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<section id="como" class="wrap">
+  <h2>Cómo funciona</h2>
+  <p class="lede">
+    Design Space no expone ninguna API: su servidor solo sirve su propia interfaz y
+    responde 404 a todo lo demás. Este ejecutable es el receptor que faltaba.
+  </p>
+
+  <div class="flow">
+    <div class="step">
+      <b>Tu lista</b>
+      <span>Nombres pegados en la página que se abre en el navegador.</span>
+    </div>
+    <div class="step">
+      <b>El puente</b>
+      <span>Escucha en <code>127.0.0.1:7788</code> y arma un <code>.lp2</code> por nombre.</span>
+    </div>
+    <div class="step">
+      <b>Design Space</b>
+      <span>Las registra en su galería con su propia capa de datos, sin reiniciar.</span>
+    </div>
+    <div class="step">
+      <b>El láser</b>
+      <span>Vista previa sobre la pieza y, si das el visto bueno, grabado.</span>
+    </div>
+  </div>
+
+  <div class="why">
+    <b>El grabado va en dos pasos, a propósito.</b> Primero la máquina recorre el contorno
+    sin quemar y la página pregunta si cae donde tiene que caer. Solo al confirmar se pulsa
+    <i>Grabado láser</i>, y antes de aceptar el aviso de la app se comprueba que la potencia
+    y la profundidad que anuncia sean las de la pieza generada. Si no coinciden, se cancela
+    y se explica por qué.
+  </div>
+</section>
+
+<section id="pasos" class="wrap">
+  <h2>Empezar</h2>
+  <p class="lede">Tres pasos la primera vez. Después, un doble clic.</p>
+  <ol class="pasos">
+    <li>
+      <div>
+        <b>Descarga y abre <code>DivergencyGrabadoraLaser.exe</code></b>
+        <span>Se abre una ventana negra: es el puente, y tiene que quedarse abierta mientras trabajas.</span>
+      </div>
+    </li>
+    <li>
+      <div>
+        <b>La página se abre sola en el navegador</b>
+        <span>Si el indicador dice que el modo en vivo está inactivo, pulsa <b>Activar modo en vivo</b>: cierra Design Space con cuidado y la reabre lista para trabajar.</span>
+      </div>
+    </li>
+    <li>
+      <div>
+        <b>Pega los nombres y pulsa Generar</b>
+        <span>Aparecen en la galería de Design Space, una pieza por persona. Hasta 200 por lote, sin duplicados.</span>
+      </div>
+    </li>
+  </ol>
+</section>
+
+<section class="wrap">
+  <h2>Qué trae</h2>
+  <p class="lede">Lo que ya está probado contra la máquina, no una lista de intenciones.</p>
+  <div class="cards">
+    <div class="card">
+      <span class="ico">📋</span>
+      <h3>Listas, no piezas de una en una</h3>
+      <p>Pega los nombres y sale un proyecto por cada uno. Normaliza espacios y descarta repetidos sin mirar mayúsculas.</p>
+    </div>
+    <div class="card">
+      <span class="ico">🖊️</span>
+      <h3>Esfero y placa</h3>
+      <p>Dos geometrías sacadas al decimal de proyectos reales aprobados en pantalla. El nombre se centra bajo el logo recalculando su ancho.</p>
+    </div>
+    <div class="card">
+      <span class="ico">🔥</span>
+      <h3>Vista previa antes de quemar</h3>
+      <p>El láser no se dispara de una: primero el contorno sobre la pieza, y el disparo solo llega cuando confirmas.</p>
+    </div>
+    <div class="card">
+      <span class="ico">🎛️</span>
+      <h3>Plantillas propias</h3>
+      <p>Guarda la potencia y la profundidad que te funcionaron con un nombre. La geometría sigue siendo la de la base, así que no descoloca nada.</p>
+    </div>
+    <div class="card">
+      <span class="ico">🔌</span>
+      <h3>Estado real de la máquina</h3>
+      <p>Distingue conectada, no conectada y no se puede saber, y lo cruza con el USB del equipo. Nunca adivina.</p>
+    </div>
+    <div class="card">
+      <span class="ico">⚡</span>
+      <h3>Galería al instante</h3>
+      <p>Las piezas se registran con la propia capa de datos de la app. Sin reinicios, y sin tocar el lienzo si estás editando.</p>
+    </div>
+  </div>
+</section>
+
+<section id="requisitos" class="wrap">
+  <h2>Requisitos</h2>
+  <p class="lede">Lo que hace falta en el equipo donde va a correr.</p>
+  <div class="tableWrap">
+    <table>
+      <tr><th>Sistema</th><td>Windows 10 u 11, 64 bits</td></tr>
+      <tr><th>LaserPecker Design Space</th><td>Instalado. Verificado de punta a punta contra la 2.12.1</td></tr>
+      <tr><th>Node.js</th><td>No hace falta: va dentro del ejecutable</td></tr>
+      <tr><th>Máquina</th><td>Se conecta desde Design Space, por USB o Bluetooth. Para generar piezas no hace falta que esté conectada</td></tr>
+      <tr><th>Permisos</th><td>Usuario normal. No pide administrador ni instala nada</td></tr>
+      <tr><th>Internet</th><td>Ninguno. El puente escucha solo en <code>127.0.0.1</code> y no manda nada a ningún sitio</td></tr>
+    </table>
+  </div>
+</section>
+
+<section class="wrap">
+  <h2>Antes de abrirlo</h2>
+  <div class="cards" style="grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));">
+    <div class="note warn">
+      <h3>Windows va a avisar</h3>
+      <p>
+        El ejecutable no está firmado, así que SmartScreen dirá
+        <span class="pill">Windows protegió tu PC</span> y no mostrará editor.
+        Es lo normal para un programa hecho en casa: pulsa <b>Más información</b> y luego
+        <b>Ejecutar de todas formas</b>.
+      </p>
+      <p>Si prefieres comprobar que el archivo es exactamente el publicado aquí, compara su huella:</p>
+      <div class="hash">
+        <code id="cmdHash">Get-FileHash .\DivergencyGrabadoraLaser.exe -Algorithm SHA256</code>
+        <button type="button" id="copiar">Copiar</button>
+      </div>
+      <p class="meta" style="margin-top:.7rem">SHA-256 publicado: <code id="sha">se carga al abrir esta página</code></p>
+    </div>
+    <div class="note">
+      <h3>Qué toca en tu equipo</h3>
+      <p>
+        Escribe los <code>.lp2</code> en la carpeta de proyectos de LaserPecker y registra las
+        piezas en la galería de la app. Sus propios ajustes van a
+        <code>%LOCALAPPDATA%\PlacasDivergencyAI</code>.
+      </p>
+      <p>
+        Para grabar necesita abrir Design Space con el puerto de depuración, y eso obliga a
+        cerrarla y reabrirla: <b>nunca lo hace sin que lo pidas</b>, porque puede haber trabajo
+        sin guardar. El cierre es ordenado, así que la app puede preguntarte.
+      </p>
+      <p>Para desinstalar: borra el <code>.exe</code> y esa carpeta. No hay registro ni servicios.</p>
+    </div>
+  </div>
+</section>
+
+<section class="wrap">
+  <h2>Lo que no hace bien</h2>
+  <p class="lede">Los límites conocidos, por delante y no en la letra pequeña.</p>
+  <ul class="limits">
+    <li><b>La miniatura de la galería muestra solo el logo, sin el nombre.</b> Es cosmético: el nombre está en el diseño y se graba. Cada pieza se distingue por su título.</li>
+    <li><b>El centrado del nombre es una estimación en la plantilla de placa.</b> Design Space remide con la fuente real al abrir, así que un nombre con muchas mayúsculas puede quedar un par de milímetros descentrado. Revisa el primero antes de un lote grande.</li>
+    <li><b>El modo en vivo muere al cerrar la app.</b> Si la abres con su icono normal, se puede volver a activar desde la página, o dejar el atajo que lo hace siempre.</li>
+    <li><b>La ventana de Design Space tiene que ser lo bastante grande</b> para que quepan sus botones de grabado. Si no caben, el puente avisa en vez de mandar el clic a ciegas.</li>
+    <li><b>Depende del idioma de la app</b> para reconocer la vista previa: está probado con la interfaz en español y en inglés.</li>
+  </ul>
+</section>
+
+<section class="wrap">
+  <h2>Preguntas</h2>
+  <details class="faq">
+    <summary>¿Por qué el archivo pesa tanto para hacer tan poco?</summary>
+    <p>Porque lleva Node dentro. Es lo que permite que no haya que instalar nada: el código propio son 130 KB, el resto es el motor que lo ejecuta. Si ya tienes Node, puedes correrlo desde el código fuente y pesa lo que pesa el repositorio.</p>
+  </details>
+  <details class="faq">
+    <summary>¿Puedo usarlo sin la máquina conectada?</summary>
+    <p>Sí. Generar las piezas y verlas en la galería no necesita máquina. Solo la vista previa y el grabado la piden, y el indicador dice en cada momento qué se puede hacer.</p>
+  </details>
+  <details class="faq">
+    <summary>¿Manda algo a internet?</summary>
+    <p>No. El puente escucha únicamente en <code>127.0.0.1</code>, rechaza cualquier petición que venga de otra página y no tiene ninguna llamada a la red. Puedes usarlo con el equipo desconectado.</p>
+  </details>
+  <details class="faq">
+    <summary>¿Se puede cambiar el logo?</summary>
+    <p>Sí, pero hoy se cambia en el código: los dos bitmaps viven en <code>assets/</code> y se sustituyen por otro PNG de 300 × 119 px antes de volver a construir el ejecutable. Con otras dimensiones hay que ajustar la geometría.</p>
+  </details>
+  <details class="faq">
+    <summary>¿Y si el puerto 7788 está ocupado?</summary>
+    <p>Si es otra copia del propio puente, la segunda se da cuenta, abre la página y se cierra. Si es otro programa, lo dice y no arranca; se puede cambiar el puerto con la variable <code>PORT</code>.</p>
+  </details>
+  <details class="faq">
+    <summary>¿Se actualiza solo?</summary>
+    <p>No. Es un archivo suelto: para actualizar, descarga el nuevo y reemplázalo. Tus plantillas propias no se pierden, están fuera del ejecutable.</p>
+  </details>
+</section>
+
+<section id="descargar" class="final wrap">
+  <h2>Descárgalo y pega tu lista</h2>
+  <p class="lede" style="margin: 0 auto 1.8rem;">Un archivo, sin instalación. La página se abre sola.</p>
+  <div class="cta">
+    <a class="btn" href="https://github.com/DiegoWhite99/Laserpackert/releases/latest/download/DivergencyGrabadoraLaser.exe">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M12 3v12m0 0l-4.5-4.5M12 15l4.5-4.5M4 20h16" />
+      </svg>
+      Descargar para Windows
+    </a>
+  </div>
+  <p class="meta">
+    <span id="mVersion2">v1.0.0</span><span class="sep">·</span><span id="mTamano2">~91 MB</span><span class="sep">·</span><span id="mFecha">Windows 10/11</span>
+  </p>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap row">
+    <span class="brand"><img src="logo.png" alt="" />Divergency Grabadora Láser</span>
+    <span class="right">Hecho para grabar placas y esferos con LaserPecker Design Space. Sin firma digital, sin telemetría, sin instalador.</span>
+  </div>
+</footer>
+
+<script>
+  // El tamaño y la huella los escribe el build en version.json: si se pusieran a
+  // mano en el HTML, a la segunda versión ya estarían mintiendo.
+  const texto = (id, valor) => { const el = document.getElementById(id); if (el) el.textContent = valor }
+
+  fetch('descargas/version.json', { cache: 'no-store' })
+    .then((r) => (r.ok ? r.json() : null))
+    .then((v) => {
+      if (!v) return
+      texto('mVersion', 'v' + v.version)
+      texto('mVersion2', 'v' + v.version)
+      texto('mTamano', v.tamano)
+      texto('mTamano2', v.tamano)
+      texto('mFecha', v.fecha)
+      texto('sha', v.sha256)
+    })
+    .catch(() => {
+      // Sin servidor (abierto con doble clic) fetch no puede leer nada: se queda
+      // el texto aproximado del HTML, que es mejor que un hueco vacío.
+    })
+
+  document.getElementById('copiar')?.addEventListener('click', async (e) => {
+    try {
+      await navigator.clipboard.writeText(document.getElementById('cmdHash').textContent)
+      const b = e.target
+      b.textContent = 'Copiado'
+      setTimeout(() => { b.textContent = 'Copiar' }, 1600)
+    } catch {
+      e.target.textContent = 'Cópialo a mano'
+    }
+  })
+</script>
+
+</body>
+</html>
