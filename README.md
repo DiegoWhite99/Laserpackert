@@ -211,7 +211,26 @@ node web/serve.js --lan      # tambien desde la red local, para bajarlo en otro 
 
 Salir de loopback se pide a mano (`--lan`): compartir un ejecutable con la red es una decisión, no un valor por defecto. El servidor es de solo lectura y no toca nada de fuera de `web/`; el puente de verdad —el que escribe ficheros y dispara el láser— es otro proceso y sigue escuchando solo en `127.0.0.1`.
 
-Para publicarla en internet vale cualquier hosting estático. Con GitHub Pages hay un detalle: rechaza ficheros de más de 100 MB, y los 91,5 MB caben por poco margen — si el ejecutable crece, mejor subirlo como *release asset* y apuntar el botón ahí.
+Está publicada en <https://diegowhite99.github.io/Laserpackert/>. GitHub Pages
+sirve la raíz de una rama y el portal vive en `web/`, así que la rama `gh-pages`
+es un espejo de esa carpeta y la mantiene al día el workflow
+`.github/workflows/pages.yml` en cada push a `main`.
+
+**El ejecutable no está en el repositorio.** Son 92 MB por versión y el historial
+de git no los suelta nunca; va como *release asset*, que es donde GitHub quiere
+los binarios. El botón de descarga apunta a
+`releases/latest/download/DivergencyGrabadoraLaser.exe`, que siempre resuelve a
+la última publicada, así que la página no hay que tocarla al sacar una versión.
+
+Publicar una versión, después de `Construir.bat`:
+
+1. GitHub → **Releases** → *Draft a new release*
+2. Tag `v1.0.0` (el que diga `version.json`), título igual
+3. Arrastrar `web\descargas\DivergencyGrabadoraLaser.exe` a los binarios
+4. *Publish release*
+
+Hasta que exista la primera release, el botón del portal da 404: la página está
+publicada, el archivo todavía no.
 
 ## Modo en vivo
 
