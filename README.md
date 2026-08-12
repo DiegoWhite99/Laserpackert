@@ -136,6 +136,20 @@ que es justo lo que hace Design Space, y desde la app se puede restaurar. Los
 `.lp2` se quedan en disco salvo que se marque la casilla de borrarlos también —y
 esos sí no vuelven.
 
+Borra **de uno en uno** con `DeleteByIdAsync`, aunque la app exponga un borrado
+en lote, porque el de lote está roto:
+
+```
+DeleteByIdListAsync([...]) -> LimitOnUpdateNotSupportedError:
+                              Your database does not support LIMIT on UPDATE statements.
+```
+
+Es su ORM metiendo un `LIMIT` en el `UPDATE` del borrado blando, que SQLite no
+acepta. Falla siempre, con uno o con cien. El individual no pasa por ahí y
+responde `{ affected: 1 }`. Y después de borrar se comprueba con `FindByIdAsync`
+que hayan desaparecido de verdad: fiarse de que la llamada no lanzara excepción
+era justo lo que dejaba pasar este fallo.
+
 ### Conexión de la máquina
 
 El indicador distingue tres cosas, sin adivinar ninguna:
@@ -444,6 +458,11 @@ Y no basta con esa variable: **si el modo en vivo está disponible, el registro 
 - **La cola guarda datos personales en claro.** `cola.json` tiene nombre, celular
   y correo de cada persona, sin cifrar, en el disco de este equipo. Se borra
   desde la landing con *vaciar la cola*, y conviene hacerlo al acabar el evento.
+- **El borrado en lote de la app no funciona** (`LimitOnUpdateNotSupportedError`).
+  Se rodea borrando de uno en uno, así que un vaciado de 200 placas son 200
+  llamadas seguidas dentro de la app y tarda unos segundos. Si el modo en vivo
+  no está disponible se escribe `deleted_date` en el SQLite y hay que volver a
+  la galería para verla actualizada.
 - **Distinguir placas de plantillas es una heurística, no un dato.** Se hace por
   la carpeta donde vive el `.lp2` (y por el nombre). Un formato copiado a la
   carpeta de proyectos y llamado como una persona aparecería como placa; por eso

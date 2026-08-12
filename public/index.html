@@ -45,6 +45,28 @@
   }
   .navBtn:hover { border-color: var(--accent); color: var(--accent); }
 
+  /* --- pestañas de la aplicación --- */
+  .tabnav { display: flex; gap: .2rem; background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: .2rem; }
+  .tabnav button {
+    width: auto; padding: .45rem .85rem; border-radius: 8px; background: transparent;
+    color: var(--muted); font-size: .86rem; font-weight: 700; border: 0; white-space: nowrap;
+    display: inline-flex; align-items: center; gap: .4rem;
+  }
+  .tabnav button[aria-selected=true] { background: var(--bg); color: var(--text); box-shadow: inset 0 0 0 1px var(--border); }
+  .tabnav button:hover:not([aria-selected=true]) { color: var(--text); }
+  .tabnav .badge {
+    background: var(--accent); color: var(--accent-ink); border-radius: 99px;
+    font-size: .7rem; padding: 0 .35rem; min-width: 1.15rem; text-align: center; font-weight: 800;
+  }
+  @media (max-width: 560px) {
+    .nav { flex-wrap: wrap; }
+    .nav .marca { order: 1; }
+    .navBtn { order: 2; }
+    .tabnav { order: 3; width: 100%; }
+    .tabnav button { flex: 1; justify-content: center; }
+  }
+  section[data-panel] > .bloque:first-child { margin-top: 0; }
+
   h1 { font-size: 1.4rem; margin: 0 0 .2rem; letter-spacing: -.02em; }
   .sub { color: var(--muted); margin: 0 0 1.5rem; font-size: .9rem; }
   .card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 1.4rem; }
@@ -219,18 +241,34 @@
 <main>
   <nav class="nav">
     <span class="marca"><img src="/logo.png" alt="" />Divergency AI</span>
+
+    <!--
+      Tres cosas distintas que antes estaban una debajo de otra: grabar una
+      pieza, atender la cola del evento y limpiar la galería. Cada una en su
+      sitio, y solo se ve la que se está usando.
+    -->
+    <div class="tabnav" role="tablist">
+      <button type="button" role="tab" data-panel="grabar" aria-selected="true">Grabar</button>
+      <button type="button" role="tab" data-panel="registro" aria-selected="false">
+        Registro QR<span class="badge hidden" id="navCola"></span>
+      </button>
+      <button type="button" role="tab" data-panel="galeria" aria-selected="false">Galería</button>
+    </div>
+
     <a class="navBtn" id="portal" href="https://diegowhite99.github.io/Laserpackert/" target="_blank" rel="noopener">
-      Portal de descargas <span aria-hidden="true">↗</span>
+      Descargas <span aria-hidden="true">↗</span>
     </a>
   </nav>
 
-  <h1>Grabados Divergency AI</h1>
-  <p class="sub">Escribe el nombre y graba. El logo va fijo; solo cambia el nombre.</p>
+  <h1 id="h1">Grabar</h1>
+  <p class="sub" id="sub">Escribe el nombre y graba. El logo va fijo; solo cambia el nombre.</p>
 
   <div class="card">
+    <!-- La plantilla manda en lo que se genera, aquí y en el lote; el estado de
+         la máquina solo hace falta donde se graba. -->
     <div class="tabs" id="tabs" role="tablist"></div>
 
-    <div class="status" id="status">
+    <div class="status hidden" id="status">
       <span class="dot pending"></span>
       <div class="body">
         <span id="statusText">Comprobando la máquina…</span>
@@ -255,6 +293,7 @@
       </div>
     </div>
 
+    <section data-panel="grabar">
     <form id="f">
       <div class="field">
         <label for="name">Nombre</label>
@@ -307,13 +346,12 @@
         <button type="button" id="btnCancel" class="secondary">Cancelar</button>
       </div>
     </div>
+    </section>
 
-    <details style="margin-top:1.2rem" id="loteBox">
-      <summary>Lote de nombres (solo generar, sin grabar)<span id="loteResumen"></span></summary>
-
-      <!-- La gente se apunta sola escaneando el código; aquí solo se genera. -->
+    <!-- La gente se apunta sola escaneando el código; aquí solo se genera. -->
+    <section data-panel="registro" class="hidden">
       <div class="bloque">
-        <h3>Registro por QR</h3>
+        <h3>El código</h3>
         <div class="actionRow">
           <button type="button" id="btnQr">Abrir el registro</button>
           <span class="note" id="qrEstado">cerrado · nadie puede apuntarse</span>
@@ -344,18 +382,17 @@
         </div>
       </div>
 
-      <div class="bloque">
-        <h3>O escríbelos a mano</h3>
-        <div class="field">
+      <details>
+        <summary>Escribir los nombres a mano</summary>
+        <div class="field" style="margin-top:.9rem">
           <textarea id="names" spellcheck="false" placeholder="Viviana Jimenez&#10;Diego Castelblanco&#10;Ana María Rojas"></textarea>
           <p class="measure" id="count">Ningún nombre todavía</p>
         </div>
         <button type="button" id="btnBatch" class="secondary">Generar el lote</button>
-      </div>
-    </details>
+      </details>
+    </section>
 
-    <details style="margin-top:.8rem" id="galeriaBox">
-      <summary>Vaciar la galería de Design Space</summary>
+    <section data-panel="galeria" class="hidden">
       <p class="aviso" id="galeriaResumen">Cargando…</p>
       <div id="galeriaLista" class="lista hidden" style="margin-top:.7rem"></div>
       <div class="barra">
@@ -370,7 +407,7 @@
         Los proyectos van a la <b>papelera de Design Space</b> y se pueden restaurar desde la app.
         Las plantillas y los formatos originales no se tocan.
       </p>
-    </details>
+    </section>
   </div>
 
   <div id="out">
@@ -397,6 +434,39 @@
 
 <script>
 const $ = (id) => document.getElementById(id)
+
+// --- pestañas --------------------------------------------------------------
+//
+// Tres tareas distintas en la misma página. Cada panel carga lo suyo al
+// abrirse, no antes: la lista de la galería son cientos de filas y quien viene
+// a grabar un esfero no tiene por qué esperarlas.
+
+const PANELES = {
+  grabar: { titulo: 'Grabar', sub: 'Escribe el nombre y graba. El logo va fijo; solo cambia el nombre.' },
+  registro: { titulo: 'Registro por QR', sub: 'La gente se apunta desde su teléfono y sale con un número de turno.' },
+  galeria: { titulo: 'Galería', sub: 'Lo generado se puede vaciar de una vez. Las plantillas se quedan.' },
+}
+let panelActual = 'grabar'
+
+function irA(nombre) {
+  if (!PANELES[nombre]) nombre = 'grabar'
+  panelActual = nombre
+  for (const b of document.querySelectorAll('.tabnav button')) b.setAttribute('aria-selected', String(b.dataset.panel === nombre))
+  for (const s of document.querySelectorAll('section[data-panel]')) s.classList.toggle('hidden', s.dataset.panel !== nombre)
+  $('h1').textContent = PANELES[nombre].titulo
+  $('sub').textContent = PANELES[nombre].sub
+  $('status').classList.toggle('hidden', nombre !== 'grabar')
+  $('tabs').classList.toggle('hidden', nombre === 'galeria')
+  if (location.hash.slice(1) !== nombre) history.replaceState(null, '', '#' + nombre)
+
+  if (nombre === 'registro') cargarCola()
+  if (nombre === 'galeria') cargarGaleria()
+  if (nombre === 'grabar') $('name').focus()
+}
+
+for (const b of document.querySelectorAll('.tabnav button')) b.addEventListener('click', () => irA(b.dataset.panel))
+addEventListener('hashchange', () => irA(location.hash.slice(1)))
+
 let TEMPLATES = []
 let current = 'esfero'
 let deviceReady = false
@@ -587,8 +657,11 @@ async function checkStatus() {
     if (s.registro) {
       pintarRegistro(s.registro)
       const q = s.registro.cola
-      $('loteResumen').textContent = q?.pendientes ? ` · ${q.pendientes} en cola` : ''
-      if ($('loteBox').open && q && q.pendientes !== COLA.filter((r) => r.estado === 'pendiente').length) cargarCola()
+      // El número en la pestaña: quien está grabando tiene que ver que hay
+      // gente esperando sin cambiar de panel.
+      $('navCola').textContent = q?.pendientes || ''
+      $('navCola').classList.toggle('hidden', !q?.pendientes)
+      if (panelActual === 'registro' && q && q.pendientes !== COLA.filter((r) => r.estado === 'pendiente').length) cargarCola()
     }
   } catch {
     dot.className = 'dot offline'
@@ -1337,10 +1410,9 @@ $('btnVaciar').addEventListener('click', async () => {
   }
 })
 
-// Las listas se cargan al abrir su panel, no antes: son dos consultas que no
-// hacen falta para grabar, que es a lo que se viene.
-$('loteBox').addEventListener('toggle', () => { if ($('loteBox').open) cargarCola() })
-$('galeriaBox').addEventListener('toggle', () => { if ($('galeriaBox').open) cargarGaleria() })
+// Con la pestaña ya en la URL se puede dejar la landing abierta en "Registro"
+// y recargar sin perder el sitio.
+irA(location.hash.slice(1) || 'grabar')
 
 // --- salida ---------------------------------------------------------------
 

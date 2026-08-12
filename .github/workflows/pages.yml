@@ -1,0 +1,47 @@
+# Publica el portal de descargas (la carpeta web/) en GitHub Pages.
+#
+# Pages sirve la raiz de una rama, y el portal vive en web/, asi que este
+# workflow mantiene una rama `gh-pages` cuyo contenido es exactamente lo que hay
+# en web/. Se eligio la rama y no el despliegue por Actions porque la rama
+# funciona sin tener que cambiar nada en los ajustes del repositorio.
+#
+# En Settings -> Pages tiene que estar: Source = Deploy from a branch,
+# Branch = gh-pages / (root).
+#
+# El ejecutable NO va aqui: son 92 MB y se publica como release asset. La
+# pagina enlaza a /releases/latest/download/, asi que cada release nueva
+# actualiza el boton sola.
+
+name: Portal de descargas
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'web/**'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Copiar web/ a la rama gh-pages
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          # La rama es un espejo de web/, no un historial propio: se rehace
+          # entera en cada publicacion.
+          git subtree split --prefix web -b gh-pages-tmp
+          git push -f origin gh-pages-tmp:gh-pages

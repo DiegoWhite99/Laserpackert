@@ -240,7 +240,16 @@ async function registerViaApp(p, port = DEFAULT_PORT) {
  *
  * Mismo motivo que para registrar: mejor que la app borre con su capa de datos
  * a escribir el SQLite por detras mientras ella lo tiene abierto. Y es borrado
- * blando -- la app conserva Restore*, asi que lo borrado se puede recuperar.
+ * blando -- rellena `deleted_date` y deja la fila, asi que se puede restaurar.
+ *
+ * SE BORRA DE UNO EN UNO aunque exista `DeleteByIdListAsync`, porque el de
+ * lote esta roto en la app (2.12.1) y falla SIEMPRE:
+ *
+ *   LimitOnUpdateNotSupportedError: Your database does not support LIMIT on
+ *   UPDATE statements.
+ *
+ * Es su ORM metiendo un LIMIT en el UPDATE del borrado blando, que SQLite no
+ * acepta. `DeleteByIdAsync` no pasa por ahi y responde { affected: 1 }.
  *
  * @param {string[]} ids
  */
@@ -253,19 +262,18 @@ async function deleteViaApp(ids, port = DEFAULT_PORT) {
        const ids = ${JSON.stringify(lista)}
        const P = window.Project
        if (!P) return { ok: false, error: 'window.Project no esta disponible' }
-       try {
-         if (typeof P.DeleteByIdListAsync === 'function') {
-           await P.DeleteByIdListAsync(ids)
-         } else if (typeof P.DeleteByIdAsync === 'function') {
-           for (const id of ids) await P.DeleteByIdAsync(id)
-         } else {
-           return { ok: false, error: 'la app no expone ninguna funcion de borrado' }
-         }
-       } catch (e) {
-         return { ok: false, error: String(e && e.message || e) }
+       if (typeof P.DeleteByIdAsync !== 'function')
+         return { ok: false, error: 'la app no expone DeleteByIdAsync' }
+
+       const fallos = []
+       for (const id of ids) {
+         try { await P.DeleteByIdAsync(id) }
+         catch (e) { fallos.push(String(e && e.message || e)) }
        }
+
        // Se comprueba contra la propia app en vez de dar por bueno el silencio:
-       // lo que cuenta es que ya no esten, no que la llamada no fallara.
+       // lo que cuenta es que ya no esten, no que la llamada no fallara. Tras
+       // borrar, FindByIdAsync devuelve null.
        let quedan = 0
        if (typeof P.FindByIdAsync === 'function') {
          for (const id of ids) {
@@ -275,10 +283,16 @@ async function deleteViaApp(ids, port = DEFAULT_PORT) {
            } catch (e) {}
          }
        }
-       return { ok: quedan === 0, borrados: ids.length - quedan, quedan }
+       return {
+         ok: quedan === 0,
+         borrados: ids.length - quedan,
+         quedan,
+         error: quedan ? (fallos[0] || quedan + ' siguen en la galeria') : undefined,
+       }
      })()`,
     port,
-    20000
+    // Un lote grande son muchas llamadas seguidas dentro de la app.
+    Math.max(20000, lista.length * 400)
   )
 }
 
