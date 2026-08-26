@@ -41,6 +41,7 @@ const MIME = {
   '.ico': 'image/x-icon',
   '.txt': 'text/plain; charset=utf-8',
   '.exe': 'application/octet-stream',
+  '.apk': 'application/vnd.android.package-archive',
 }
 
 /** Direcciones IPv4 de la maquina, para decir por donde entrar desde la red. */
@@ -81,8 +82,8 @@ const server = http.createServer(async (req, res) => {
     // nombre y no interesa que el navegador sirva uno viejo tampoco.
     'Cache-Control': 'no-store',
   }
-  // Que el navegador no intente "abrir" el ejecutable en una pestaña.
-  if (ext === '.exe') headers['Content-Disposition'] = `attachment; filename="${path.basename(target)}"`
+  // Que el navegador no intente "abrir" el ejecutable/apk en una pestaña.
+  if (ext === '.exe' || ext === '.apk') headers['Content-Disposition'] = `attachment; filename="${path.basename(target)}"`
 
   if (req.method === 'HEAD') {
     res.writeHead(200, headers)
