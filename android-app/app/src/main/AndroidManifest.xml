@@ -5,7 +5,10 @@
         Sin permisos de Bluetooth/ubicación a propósito: esta app no habla con
         la máquina. Genera una imagen y se la pasa a la app oficial de
         LaserPecker, que es la que ya tiene el emparejamiento Bluetooth hecho.
+        El único vínculo directo con hardware es de solo lectura: enumerar el
+        USB por su vendor id para saber si el cable a la laser está puesto.
     -->
+    <uses-feature android:name="android.hardware.usb.host" android:required="false" />
 
     <application
         android:allowBackup="true"

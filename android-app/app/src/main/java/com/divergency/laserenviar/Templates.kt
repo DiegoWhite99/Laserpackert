@@ -122,7 +122,7 @@ val PLANTILLAS = listOf(
         airAssist = false,
     ),
     TemplateSpec(
-        id = "esfero-linea", label = "Esfero en línea",
+        id = "esfero-linea", label = "Formato Andicom",
         logo = LogoSpec(300.0, 119.0, 40.764920620455825, 48.97253853765574, 0.052937593428903654, 0.052460420560889454, 5, 20),
         text = TextSpec(50.76393356102865, 0.2366024321796071, 0.19616519174041344, 13.56, 12.0, "Times New Roman", "", 1.1, 20, 14, usaMetricaTimes = true),
         enLinea = true,

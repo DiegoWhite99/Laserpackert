@@ -21,6 +21,16 @@
             android:src="@drawable/logo_divergency" />
 
         <TextView
+            android:id="@+id/textEstadoCable"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            android:padding="10dp"
+            android:gravity="center"
+            android:textStyle="bold"
+            android:text="Comprobando el cable…" />
+
+        <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Plantilla"

@@ -1,13 +1,18 @@
 package com.divergency.laserenviar
 
+import android.content.BroadcastReceiver
 import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.RectF
 import android.graphics.Typeface
+import android.hardware.usb.UsbManager
+import android.os.Build
 import android.os.Bundle
 import android.text.TextPaint
 import android.widget.ArrayAdapter
@@ -21,6 +26,13 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.FileProvider
 import java.io.File
 import java.io.FileOutputStream
+
+// Mismo chip serie que detecta el puente de escritorio en machine.js: WCH
+// CH340/CH9102, vendor id 0x1A86. Aca solo se enumera (sin abrir el
+// dispositivo), asi que no hace falta pedir permiso USB en tiempo de
+// ejecucion: es una pista visual, igual que alla, no la autoridad sobre si
+// la laser esta realmente lista.
+private const val VENDOR_ID_LASERPECKER = 0x1A86
 
 // Paquetes conocidos de la app oficial en Google Play, y la actividad exacta
 // que ya declara aceptar VIEW/SEND de un fichero de proyecto (confirmado
@@ -40,6 +52,14 @@ class MainActivity : AppCompatActivity() {
     private lateinit var spinnerPlantilla: Spinner
     private lateinit var imagenVistaPrevia: ImageView
     private lateinit var textEstado: TextView
+    private lateinit var textEstadoCable: TextView
+    private lateinit var usbManager: UsbManager
+
+    private val usbReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            actualizarEstadoCable()
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -49,6 +69,8 @@ class MainActivity : AppCompatActivity() {
         spinnerPlantilla = findViewById(R.id.spinnerPlantilla)
         imagenVistaPrevia = findViewById(R.id.imagenVistaPrevia)
         textEstado = findViewById(R.id.textEstado)
+        textEstadoCable = findViewById(R.id.textEstadoCable)
+        usbManager = getSystemService(Context.USB_SERVICE) as UsbManager
 
         spinnerPlantilla.adapter = ArrayAdapter(
             this,
@@ -57,6 +79,44 @@ class MainActivity : AppCompatActivity() {
         )
 
         findViewById<Button>(R.id.botonGenerar).setOnClickListener { generarYEnviar() }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        val filtro = IntentFilter().apply {
+            addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED)
+            addAction(UsbManager.ACTION_USB_DEVICE_DETACHED)
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(usbReceiver, filtro, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            registerReceiver(usbReceiver, filtro)
+        }
+        actualizarEstadoCable()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        unregisterReceiver(usbReceiver)
+    }
+
+    /**
+     * Pista visual, no autoridad: igual que machine.js en el puente de
+     * escritorio, esto solo enumera el USB por vendor id (0x1A86, chip WCH
+     * de la laser) para avisar si falta el cable. Quien manda de verdad
+     * sobre si la laser esta lista es Design Space, que la abre despues.
+     */
+    private fun actualizarEstadoCable() {
+        val conectada = usbManager.deviceList.values.any { it.vendorId == VENDOR_ID_LASERPECKER }
+        if (conectada) {
+            textEstadoCable.text = "🟢 Laser conectada por cable"
+            textEstadoCable.setBackgroundColor(Color.parseColor("#DFF5E1"))
+            textEstadoCable.setTextColor(Color.parseColor("#1B7A34"))
+        } else {
+            textEstadoCable.text = "🔴 Conecta la tablet a la laser con el cable USB"
+            textEstadoCable.setBackgroundColor(Color.parseColor("#FBE1E1"))
+            textEstadoCable.setTextColor(Color.parseColor("#B3261E"))
+        }
     }
 
     private fun generarYEnviar() {
