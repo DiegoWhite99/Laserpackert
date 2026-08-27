@@ -122,14 +122,13 @@ val PLANTILLAS = listOf(
         airAssist = false,
     ),
     TemplateSpec(
-        id = "esfero-linea", label = "Formato Andicom",
-        logo = LogoSpec(300.0, 119.0, 40.764920620455825, 48.97253853765574, 0.052937593428903654, 0.052460420560889454, 5, 20),
-        text = TextSpec(50.76393356102865, 0.2366024321796071, 0.19616519174041344, 13.56, 12.0, "Times New Roman", "", 1.1, 20, 14, usaMetricaTimes = true),
+        id = "formato-andicom", label = "Formato Andicom",
+        logo = LogoSpec(300.0, 119.0, 6.491587538347616, 34.80828710516282, 0.048411640888125336, 0.04893306520639578, 100, 77),
+        text = TextSpec(36.04038410378957, 0.269208144493339, 0.2477021211141291, 13.56, 12.0, "Times New Roman", "", 1.1, 80, 80, usaMetricaTimes = true),
         enLinea = true,
-        materialId = "acrylic_0_10", materialKey = "acrylic", materialName = "Acrílico",
+        materialId = "stainless_steel_0_10", materialKey = "stainless_steel", materialName = "Acero inoxidable",
         airAssist = false,
         layerFillOverride = LayerOverride(dpi = 846.66666, px = 1.0, des = "4K"),
-        layerPictureOverride = LayerOverride(fanLevel = 0, pump = 0),
     ),
     TemplateSpec(
         id = "placa", label = "Placa",
