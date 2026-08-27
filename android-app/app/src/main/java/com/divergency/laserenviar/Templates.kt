@@ -132,10 +132,13 @@ fun layout(template: TemplateSpec, name: String): Layout {
 // 101.63671875 que trae el objeto de texto guardado, asi que la tabla de
 // anchos sigue coincidiendo con lo que mide Design Space. El gapMm sale de
 // restar el borde derecho del logo a la posicion del texto.
+//
+// El logo de Andicom_final.lp2 se agrando 1.8mm a pedido (mismo punto de
+// anclaje, misma proporcion 300x119).
 val PLANTILLAS = listOf(
     TemplateSpec(
         id = "formato-andicom", label = "Formato Andicom",
-        logo = LogoSpec(300.0, 119.0, 8.828717521918248, 48.927805258055386, 0.050130056963149164, 0.053351593693090976, 100, 77),
+        logo = LogoSpec(300.0, 119.0, 8.828717521918248, 48.927805258055386, 0.05613005696314917, 0.05973717514961835, 100, 77),
         text = TextSpec(50.30552906080053, 0.23449492976728464, 0.26499941327341703, 13.56, 12.0, "", printPower = 80, printDepth = 80, usaMetricaTimes = true),
         enLinea = true,
         gapMm = 0.9968847352025314,
