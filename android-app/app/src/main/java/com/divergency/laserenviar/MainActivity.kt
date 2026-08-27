@@ -53,6 +53,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var imagenVistaPrevia: ImageView
     private lateinit var textEstado: TextView
     private lateinit var textEstadoCable: TextView
+    private lateinit var textVersion: TextView
     private lateinit var usbManager: UsbManager
 
     private val usbReceiver = object : BroadcastReceiver() {
@@ -70,7 +71,17 @@ class MainActivity : AppCompatActivity() {
         imagenVistaPrevia = findViewById(R.id.imagenVistaPrevia)
         textEstado = findViewById(R.id.textEstado)
         textEstadoCable = findViewById(R.id.textEstadoCable)
+        textVersion = findViewById(R.id.textVersion)
         usbManager = getSystemService(Context.USB_SERVICE) as UsbManager
+
+        // Version bien visible a proposito: cuando algo "no se ve arreglado"
+        // despues de instalar un APK nuevo, la causa mas comun es que quedo
+        // la version vieja instalada (o se reabrio un .apk viejo repetido en
+        // Descargas). Con esto se confirma de un vistazo cual build corre,
+        // sin tener que adivinar.
+        val info = packageManager.getPackageInfo(packageName, 0)
+        @Suppress("DEPRECATION")
+        textVersion.text = "v${info.versionName} (${info.versionCode})"
 
         spinnerPlantilla.adapter = ArrayAdapter(
             this,

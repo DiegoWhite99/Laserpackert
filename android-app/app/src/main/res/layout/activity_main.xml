@@ -1,89 +1,116 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<!--
+    ConstraintLayout de raiz solo para poder ponerle un ancho maximo al
+    formulario (layout_constraintWidth_max) y centrarlo: en un celular ocupa
+    toda la pantalla igual que antes, pero en una tablet grande evita que un
+    EditText o un boton se estiren de borde a borde, que es lo que se ve "no
+    responsive" en pantallas anchas. Mismo contenido y mismos ids de siempre.
+-->
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:fillViewport="true">
+    android:layout_height="match_parent">
 
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="24dp">
+    <ScrollView
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:fillViewport="true"
+        app:layout_constraintWidth_max="640dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent">
 
-        <ImageView
-            android:layout_width="120dp"
-            android:layout_height="48dp"
-            android:layout_gravity="center_horizontal"
-            android:layout_marginBottom="16dp"
-            android:contentDescription="@string/app_name"
-            android:scaleType="fitCenter"
-            android:src="@drawable/logo_divergency" />
-
-        <TextView
-            android:id="@+id/textEstadoCable"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            android:padding="10dp"
-            android:gravity="center"
-            android:textStyle="bold"
-            android:text="Comprobando el cable…" />
+            android:orientation="vertical"
+            android:padding="24dp">
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Plantilla"
-            android:textStyle="bold"
-            android:layout_marginBottom="4dp" />
+            <ImageView
+                android:layout_width="120dp"
+                android:layout_height="48dp"
+                android:layout_gravity="center_horizontal"
+                android:contentDescription="@string/app_name"
+                android:scaleType="fitCenter"
+                android:src="@drawable/logo_divergency" />
 
-        <Spinner
-            android:id="@+id/spinnerPlantilla"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp" />
+            <TextView
+                android:id="@+id/textVersion"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginBottom="16dp"
+                android:textSize="11sp"
+                android:textColor="#999999"
+                android:text="v1.0" />
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Nombres (uno por línea)"
-            android:textStyle="bold"
-            android:layout_marginBottom="4dp" />
+            <TextView
+                android:id="@+id/textEstadoCable"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:padding="10dp"
+                android:gravity="center"
+                android:textStyle="bold"
+                android:text="Comprobando el cable…" />
 
-        <EditText
-            android:id="@+id/editNombres"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:minLines="3"
-            android:gravity="top|start"
-            android:inputType="textMultiLine|textCapWords"
-            android:hint="Diego Castelblanco"
-            android:layout_marginBottom="16dp" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Plantilla"
+                android:textStyle="bold"
+                android:layout_marginBottom="4dp" />
 
-        <Button
-            android:id="@+id/botonGenerar"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Generar y enviar a LaserPecker" />
+            <Spinner
+                android:id="@+id/spinnerPlantilla"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp" />
 
-        <TextView
-            android:id="@+id/textEstado"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:textColor="#666666" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Nombres (uno por línea)"
+                android:textStyle="bold"
+                android:layout_marginBottom="4dp" />
 
-        <ImageView
-            android:id="@+id/imagenVistaPrevia"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:adjustViewBounds="true"
-            android:maxHeight="320dp"
-            android:minHeight="80dp"
-            android:background="#EEEEEE"
-            android:scaleType="fitCenter"
-            android:contentDescription="Vista previa" />
+            <EditText
+                android:id="@+id/editNombres"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minLines="3"
+                android:gravity="top|start"
+                android:inputType="textMultiLine|textCapWords"
+                android:hint="Diego Castelblanco"
+                android:layout_marginBottom="16dp" />
 
-    </LinearLayout>
-</ScrollView>
+            <Button
+                android:id="@+id/botonGenerar"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Generar y enviar a LaserPecker" />
+
+            <TextView
+                android:id="@+id/textEstado"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:textColor="#666666" />
+
+            <ImageView
+                android:id="@+id/imagenVistaPrevia"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:adjustViewBounds="true"
+                android:maxHeight="320dp"
+                android:minHeight="80dp"
+                android:background="#EEEEEE"
+                android:scaleType="fitCenter"
+                android:contentDescription="Vista previa" />
+
+        </LinearLayout>
+    </ScrollView>
+</androidx.constraintlayout.widget.ConstraintLayout>
