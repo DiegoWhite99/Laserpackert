@@ -224,11 +224,12 @@ fun buildBadgeLp2(context: Context, template: TemplateSpec, name: String): ByteA
     val nombreSrcUri = "res/${UUID.randomUUID()}.png"
 
     // Se manda como imagen, no como texto editable: ver el comentario de
-    // renderizarNombre(). Al ser imagen queda en la misma capa que el logo
-    // (layerPicture no distingue objetos), asi que usa su misma potencia --
-    // decision tomada con el usuario a proposito de perder el ajuste fino
-    // independiente que tenia el texto (antes 80/80 contra el 100/77 del
-    // logo).
+    // renderizarNombre(). Se probo compartir la potencia del logo
+    // (layerPicture) y la calidad de grabado del nombre bajo -- el trazo
+    // fino del texto no aguanta la misma potencia que el area solida del
+    // logo. Cada objeto guarda su propio printPower/printDepth (funciona:
+    // son campos del objeto, no solo del perfil de la capa), asi que el
+    // nombre vuelve a su ajuste original aunque los dos sean imagenes.
     val nameObject = JSONObject().apply {
         put("id", randomObjectId())
         put("mtype", 10010)
@@ -242,8 +243,8 @@ fun buildBadgeLp2(context: Context, template: TemplateSpec, name: String): ByteA
         put("height", nombreBitmap.height.toDouble())
         put("scaleX", geo.textMmWidth / nombreBitmap.width)
         put("scaleY", geo.textMmHeight / nombreBitmap.height)
-        put("printPower", template.logo.printPower)
-        put("printDepth", template.logo.printDepth)
+        put("printPower", template.text.printPower)
+        put("printDepth", template.text.printDepth)
         put("printCount", 1)
         put("printSpeed", 0)
         put("isCut", false)

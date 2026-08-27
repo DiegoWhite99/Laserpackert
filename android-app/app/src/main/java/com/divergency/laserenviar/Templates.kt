@@ -61,6 +61,11 @@ data class LogoSpec(
 data class TextSpec(
     val top: Double, val scaleX: Double, val scaleY: Double, val objectHeight: Double,
     val fontSize: Double, val fontStyle: String,
+    // Aunque el nombre se manda como imagen (Lp2Builder.kt), conserva su
+    // propia potencia/profundidad -- se probo compartir la del logo y la
+    // calidad de grabado del nombre salio peor, asi que cada objeto guarda
+    // la suya aunque los dos sean imagenes.
+    val printPower: Int, val printDepth: Int,
     // Times New Roman (esfero/esfero-linea): metrica exacta. AgencyFB (placa): estimacion por ancho medio.
     val usaMetricaTimes: Boolean, val charRatio: Double = 0.0,
 )
@@ -124,7 +129,7 @@ val PLANTILLAS = listOf(
     TemplateSpec(
         id = "formato-andicom", label = "Formato Andicom",
         logo = LogoSpec(300.0, 119.0, 6.491587538347616, 34.80828710516282, 0.05507830755479201, 0.0556715361345589, 100, 77),
-        text = TextSpec(36.04038410378957, 0.269208144493339, 0.2477021211141291, 13.56, 12.0, "", usaMetricaTimes = true),
+        text = TextSpec(36.04038410378957, 0.269208144493339, 0.2477021211141291, 13.56, 12.0, "", printPower = 80, printDepth = 80, usaMetricaTimes = true),
         enLinea = true,
         materialId = "stainless_steel_0_10", materialKey = "stainless_steel", materialName = "Acero inoxidable",
         airAssist = false,
