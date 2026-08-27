@@ -211,13 +211,28 @@ class MainActivity : AppCompatActivity() {
         .trim('-')
         .ifEmpty { "placa" }
 
-    /** Solo para la vista previa dentro de nuestra propia app: logo + nombre con la misma geometria del .lp2. */
+    /**
+     * Solo para la vista previa dentro de nuestra propia app: logo + nombre
+     * con la misma geometria del .lp2.
+     *
+     * El tamano de fuente NO se puede sacar de la altura de la caja
+     * (`textMmHeight`) como se hacia antes: eso trataba la altura del objeto
+     * como si fuera el tamano de fuente en Android, y salia gigante y
+     * descuadrado contra el logo. Design Space arma el texto a su tamano
+     * natural con la fuente real y le aplica un scaleX/scaleY para llegar al
+     * tamano final; aqui se hace lo mismo -- se mide el texto a un tamano de
+     * referencia con la fuente que de verdad va a dibujar Android (que no es
+     * Times New Roman: ese systemfont no existe en Android, por eso el ancho
+     * se sigue calculando aparte con TIMES_WIDTHS) y se escala esa medida
+     * exacto a la caja destino. Asi el resultado no depende de que fuente
+     * sustituya Android, igual que tampoco depende del logo.
+     */
     private fun dibujarVistaPrevia(plantilla: TemplateSpec, nombre: String): Bitmap {
         val geo = layout(plantilla, nombre)
         val paint = TextPaint().apply {
             isAntiAlias = true
             color = Color.BLACK
-            textSize = (geo.textMmHeight * PX_POR_MM).toFloat()
+            textSize = 200f
             typeface = if (plantilla.text.fontStyle == "italic") {
                 Typeface.create("sans-serif-condensed", Typeface.ITALIC)
             } else {
@@ -242,17 +257,22 @@ class MainActivity : AppCompatActivity() {
         val dst = RectF(dstLeft, dstTop, dstLeft + (geo.logoMmWidth * PX_POR_MM).toFloat(), dstTop + (geo.logoMmHeight * PX_POR_MM).toFloat())
         canvas.drawBitmap(logo, null, dst, null)
 
-        // Centrado vertical dentro de la caja del objeto (top..top+height), no
-        // apoyado en el tope: Design Space centra el nombre contra el logo (se
-        // comprobo a mano contra "Formato Andicom" que sus centros verticales
-        // coinciden al milimetro), y anclar solo por ascent() ignora el
-        // descendente y descuadra la vista previa contra eso.
-        val textX = ((geo.textLeft - origenXMm) * PX_POR_MM).toFloat()
-        val textBoxTopPx = ((plantilla.text.top - origenYMm) * PX_POR_MM).toFloat()
-        val textBoxHeightPx = (geo.textMmHeight * PX_POR_MM).toFloat()
-        val glyphHeightPx = paint.descent() - paint.ascent()
-        val baseline = textBoxTopPx + (textBoxHeightPx - glyphHeightPx) / 2f - paint.ascent()
-        canvas.drawText(nombre, textX, baseline, paint)
+        val fm = paint.fontMetrics
+        val medidoAnchoPx = paint.measureText(nombre)
+        val medidoAltoPx = fm.descent - fm.ascent
+        val objetivoAnchoPx = (geo.textMmWidth * PX_POR_MM).toFloat()
+        val objetivoAltoPx = (geo.textMmHeight * PX_POR_MM).toFloat()
+        val escalaX = if (medidoAnchoPx > 0f) objetivoAnchoPx / medidoAnchoPx else 1f
+        val escalaY = if (medidoAltoPx > 0f) objetivoAltoPx / medidoAltoPx else 1f
+
+        val dstTextLeft = ((geo.textLeft - origenXMm) * PX_POR_MM).toFloat()
+        val dstTextTop = ((plantilla.text.top - origenYMm) * PX_POR_MM).toFloat()
+
+        canvas.save()
+        canvas.translate(dstTextLeft, dstTextTop)
+        canvas.scale(escalaX, escalaY)
+        canvas.drawText(nombre, 0f, -fm.ascent, paint)
+        canvas.restore()
 
         return bitmap
     }
