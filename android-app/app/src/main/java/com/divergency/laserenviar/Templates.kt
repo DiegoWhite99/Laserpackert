@@ -76,6 +76,7 @@ data class TemplateSpec(
     val id: String, val label: String,
     val logo: LogoSpec, val text: TextSpec,
     val enLinea: Boolean, // false = nombre debajo (centrado); true = nombre a la derecha del logo
+    val gapMm: Double = 0.0, // espacio extra entre el borde del logo y el nombre (enLinea)
     val materialId: String, val materialKey: String, val materialName: String,
     val airAssist: Boolean,
     // El nombre se manda como imagen (ver Lp2Builder.kt), asi que cae en la
@@ -105,7 +106,7 @@ fun layout(template: TemplateSpec, name: String): Layout {
     val textMmHeight = text.objectHeight * text.scaleY
 
     val textLeft = if (template.enLinea) {
-        logo.left + logoMmWidth
+        logo.left + logoMmWidth + template.gapMm
     } else {
         logo.left + logoMmWidth / 2 - textMmWidth / 2
     }
@@ -120,17 +121,26 @@ fun layout(template: TemplateSpec, name: String): Layout {
 
 // Solo queda "Formato Andicom" a proposito: la app se dedico al evento
 // Andicom y se quitaron Esfero/Placa del selector para no confundir en el
-// puesto. El logo va 2mm mas grande que el proyecto original en total (a
-// pedido, en dos pasos de 1mm), manteniendo la proporcion 300x119 y el mismo
-// punto de anclaje (left/top no se tocan, solo crece hacia la
-// derecha/abajo). El nombre quedo otra vez en el mismo top del proyecto
-// original (bajo 1mm, luego subio 1mm -- se cancela).
+// puesto.
+//
+// Geometria portada tal cual de "formato Andicom.svg", el export real que
+// mando el usuario desde Design Space (mismo uuid de logo que el .lp2
+// original: 95d3fb30-a001-4205-a6e9-e66a2fb9ada6) -- no estimada ni
+// reajustada a mano paso a paso como las versiones anteriores. El svg trae
+// el logo por transform matrix(a 0 0 d e f) sobre una imagen de 300x119 en
+// (-150,-59.5), y el nombre "Diego Castelblanco" ya rasterizado por Design
+// Space en (17.697922335366293, 50.65927467789312) de 17.911145346398 x
+// 2.051413674330462mm -- de ahi sale scaleX/scaleY del texto (dividiendo
+// por measureTimesWidth("Diego Castelblanco", 12) = 94.306640625 y por
+// objectHeight = 13.56) y el gapMm entre el borde del logo y el nombre
+// (0.5637253240662936mm, el espacio que dejo el usuario en el original).
 val PLANTILLAS = listOf(
     TemplateSpec(
         id = "formato-andicom", label = "Formato Andicom",
-        logo = LogoSpec(300.0, 119.0, 6.491587538347616, 34.80828710516282, 0.05507830755479201, 0.0556715361345589, 100, 77),
-        text = TextSpec(36.04038410378957, 0.269208144493339, 0.2477021211141291, 13.56, 12.0, "", printPower = 80, printDepth = 80, usaMetricaTimes = true),
+        logo = LogoSpec(300.0, 119.0, 5.671199711300001, 49.265384163949996, 0.038209991, 0.0406655017, 100, 77),
+        text = TextSpec(50.65927467789312, 0.1899245400715704, 0.15128419427215795, 13.56, 12.0, "", printPower = 80, printDepth = 80, usaMetricaTimes = true),
         enLinea = true,
+        gapMm = 0.5637253240662936,
         materialId = "stainless_steel_0_10", materialKey = "stainless_steel", materialName = "Acero inoxidable",
         airAssist = false,
     ),
