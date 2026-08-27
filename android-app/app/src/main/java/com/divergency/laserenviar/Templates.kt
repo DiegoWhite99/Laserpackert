@@ -118,13 +118,13 @@ fun layout(template: TemplateSpec, name: String): Layout {
 // puesto. El logo va 2mm mas grande que el proyecto original en total (a
 // pedido, en dos pasos de 1mm), manteniendo la proporcion 300x119 y el mismo
 // punto de anclaje (left/top no se tocan, solo crece hacia la
-// derecha/abajo). El nombre queda 0.5mm mas arriba que el proyecto
-// original (bajo 1mm, luego subio 0.5mm).
+// derecha/abajo). El nombre quedo otra vez en el mismo top del proyecto
+// original (bajo 1mm, luego subio 1mm -- se cancela).
 val PLANTILLAS = listOf(
     TemplateSpec(
         id = "formato-andicom", label = "Formato Andicom",
         logo = LogoSpec(300.0, 119.0, 6.491587538347616, 34.80828710516282, 0.05507830755479201, 0.0556715361345589, 100, 77),
-        text = TextSpec(36.54038410378957, 0.269208144493339, 0.2477021211141291, 13.56, 12.0, "", usaMetricaTimes = true),
+        text = TextSpec(36.04038410378957, 0.269208144493339, 0.2477021211141291, 13.56, 12.0, "", usaMetricaTimes = true),
         enLinea = true,
         materialId = "stainless_steel_0_10", materialKey = "stainless_steel", materialName = "Acero inoxidable",
         airAssist = false,
