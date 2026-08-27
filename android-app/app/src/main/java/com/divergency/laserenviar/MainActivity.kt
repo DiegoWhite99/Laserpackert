@@ -242,9 +242,16 @@ class MainActivity : AppCompatActivity() {
         val dst = RectF(dstLeft, dstTop, dstLeft + (geo.logoMmWidth * PX_POR_MM).toFloat(), dstTop + (geo.logoMmHeight * PX_POR_MM).toFloat())
         canvas.drawBitmap(logo, null, dst, null)
 
+        // Centrado vertical dentro de la caja del objeto (top..top+height), no
+        // apoyado en el tope: Design Space centra el nombre contra el logo (se
+        // comprobo a mano contra "Formato Andicom" que sus centros verticales
+        // coinciden al milimetro), y anclar solo por ascent() ignora el
+        // descendente y descuadra la vista previa contra eso.
         val textX = ((geo.textLeft - origenXMm) * PX_POR_MM).toFloat()
-        val textTopPx = ((plantilla.text.top - origenYMm) * PX_POR_MM).toFloat()
-        val baseline = textTopPx - paint.ascent()
+        val textBoxTopPx = ((plantilla.text.top - origenYMm) * PX_POR_MM).toFloat()
+        val textBoxHeightPx = (geo.textMmHeight * PX_POR_MM).toFloat()
+        val glyphHeightPx = paint.descent() - paint.ascent()
+        val baseline = textBoxTopPx + (textBoxHeightPx - glyphHeightPx) / 2f - paint.ascent()
         canvas.drawText(nombre, textX, baseline, paint)
 
         return bitmap
