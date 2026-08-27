@@ -100,6 +100,39 @@ class MainActivity : AppCompatActivity() {
         unregisterReceiver(usbReceiver)
     }
 
+    // Tinos (Google Fonts, Apache-2.0, empaquetada en assets/fonts): elegante,
+    // libre de redistribuir (Times New Roman no lo es, y Android no la trae
+    // instalada), y con las mismas metricas de avance que Times New Roman, que
+    // es la fuente con la que Design Space mide de verdad. Con esto la vista
+    // previa no depende de que "serif" generico decida poner cada fabricante
+    // de tablet -- el ancho que calcula TIMES_WIDTHS coincide con lo que se ve.
+    private val tinosRegular: Typeface by lazy { Typeface.createFromAsset(assets, "fonts/Tinos-Regular.ttf") }
+    private val tinosItalic: Typeface by lazy { Typeface.createFromAsset(assets, "fonts/Tinos-Italic.ttf") }
+
+    /**
+     * Ajusta el alto del recuadro de vista previa al aspecto real del bitmap
+     * generado, calculado sobre el ancho que de verdad tiene el recuadro en
+     * pantalla en ese momento -- no un valor en dp adivinado por XML, que se
+     * queda corto o sobra segun la plantilla (una placa ancha y baja no es lo
+     * mismo que una vertical) y segun el tamano/orientacion de la tablet.
+     */
+    private fun mostrarVistaPrevia(bitmap: Bitmap) {
+        imagenVistaPrevia.setImageBitmap(bitmap)
+        imagenVistaPrevia.post {
+            val anchoPx = imagenVistaPrevia.width
+            if (anchoPx <= 0 || bitmap.width <= 0) return@post
+            val relacion = bitmap.height.toFloat() / bitmap.width.toFloat()
+            val densidad = resources.displayMetrics.density
+            val altoDeseado = (anchoPx * relacion).toInt()
+                .coerceIn((70 * densidad).toInt(), (360 * densidad).toInt())
+            val params = imagenVistaPrevia.layoutParams
+            if (params.height != altoDeseado) {
+                params.height = altoDeseado
+                imagenVistaPrevia.layoutParams = params
+            }
+        }
+    }
+
     /**
      * Pista visual, no autoridad: igual que machine.js en el puente de
      * escritorio, esto solo enumera el USB por vendor id (0x1A86, chip WCH
@@ -141,7 +174,7 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        imagenVistaPrevia.setImageBitmap(dibujarVistaPrevia(plantilla, nombre))
+        mostrarVistaPrevia(dibujarVistaPrevia(plantilla, nombre))
 
         val carpeta = File(cacheDir, "proyectos").apply { mkdirs() }
         carpeta.listFiles()?.forEach { it.delete() }
@@ -233,11 +266,7 @@ class MainActivity : AppCompatActivity() {
             isAntiAlias = true
             color = Color.BLACK
             textSize = 200f
-            typeface = if (plantilla.text.fontStyle == "italic") {
-                Typeface.create("sans-serif-condensed", Typeface.ITALIC)
-            } else {
-                Typeface.SERIF
-            }
+            typeface = if (plantilla.text.fontStyle == "italic") tinosItalic else tinosRegular
         }
 
         val minX = minOf(plantilla.logo.left, geo.textLeft)
