@@ -60,8 +60,7 @@ data class LogoSpec(
 
 data class TextSpec(
     val top: Double, val scaleX: Double, val scaleY: Double, val objectHeight: Double,
-    val fontSize: Double, val fontFamily: String, val fontStyle: String, val lineHeight: Double,
-    val printPower: Int, val printDepth: Int,
+    val fontSize: Double, val fontStyle: String,
     // Times New Roman (esfero/esfero-linea): metrica exacta. AgencyFB (placa): estimacion por ancho medio.
     val usaMetricaTimes: Boolean, val charRatio: Double = 0.0,
 )
@@ -74,7 +73,9 @@ data class TemplateSpec(
     val enLinea: Boolean, // false = nombre debajo (centrado); true = nombre a la derecha del logo
     val materialId: String, val materialKey: String, val materialName: String,
     val airAssist: Boolean,
-    val layerFillOverride: LayerOverride? = null,
+    // El nombre se manda como imagen (ver Lp2Builder.kt), asi que cae en la
+    // misma capa que el logo (layerPicture): ya no hay objeto de texto que
+    // use layerFill, por eso no hay override para esa capa.
     val layerPictureOverride: LayerOverride? = null,
 )
 
@@ -112,30 +113,18 @@ fun layout(template: TemplateSpec, name: String): Layout {
     return Layout(logoMmWidth, logoMmHeight, objectWidth, textMmWidth, textMmHeight, textLeft, maxX - minX, maxY - minY)
 }
 
+// Solo queda "Formato Andicom" a proposito: la app se dedico al evento
+// Andicom y se quitaron Esfero/Placa del selector para no confundir en el
+// puesto. El logo de este va 1mm mas grande que el proyecto original (a
+// pedido), manteniendo la proporcion 300x119 y el mismo punto de anclaje
+// (left/top no se tocan, solo crece hacia la derecha/abajo).
 val PLANTILLAS = listOf(
     TemplateSpec(
-        id = "esfero", label = "Esfero",
-        logo = LogoSpec(300.0, 119.0, 61.8746168029476, 46.1020669130106, 0.0395316836517970, 0.0391753499833447, 65, 30),
-        text = TextSpec(50.76393356102865, 0.2366024321796071, 0.19616519174041344, 13.56, 12.0, "Times New Roman", "", 1.1, 73, 15, usaMetricaTimes = true),
-        enLinea = false,
-        materialId = "aluminum_0_10", materialKey = "aluminum", materialName = "Óxido de aluminio",
-        airAssist = false,
-    ),
-    TemplateSpec(
         id = "formato-andicom", label = "Formato Andicom",
-        logo = LogoSpec(300.0, 119.0, 6.491587538347616, 34.80828710516282, 0.048411640888125336, 0.04893306520639578, 100, 77),
-        text = TextSpec(36.04038410378957, 0.269208144493339, 0.2477021211141291, 13.56, 12.0, "Times New Roman", "", 1.1, 80, 80, usaMetricaTimes = true),
+        logo = LogoSpec(300.0, 119.0, 6.491587538347616, 34.80828710516282, 0.05174497422145868, 0.05230230067047734, 100, 77),
+        text = TextSpec(36.04038410378957, 0.269208144493339, 0.2477021211141291, 13.56, 12.0, "", usaMetricaTimes = true),
         enLinea = true,
         materialId = "stainless_steel_0_10", materialKey = "stainless_steel", materialName = "Acero inoxidable",
         airAssist = false,
-        layerFillOverride = LayerOverride(dpi = 846.66666, px = 1.0, des = "4K"),
-    ),
-    TemplateSpec(
-        id = "placa", label = "Placa",
-        logo = LogoSpec(300.0, 119.0, 27.092661128138637, 32.89677475564266, 0.13906264472739224, 0.1378091513832468, 14, 5),
-        text = TextSpec(49.29606377024903, 0.5969161786971131, 0.7459956442207459, 13.56, 12.0, "AgencyFB-Reg", "italic", 1.1, 27, 26, usaMetricaTimes = false, charRatio = 60.1640625 / (15 * 12)),
-        enLinea = false,
-        materialId = "paper_jam_0_10", materialKey = "paper_jam", materialName = "Cartulina",
-        airAssist = true,
     ),
 )
