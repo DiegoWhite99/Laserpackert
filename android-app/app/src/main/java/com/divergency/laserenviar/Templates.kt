@@ -51,22 +51,20 @@ fun measureTimesWidth(text: String, fontSize: Double): Double {
     return (total.toDouble() / TIMES_UNITS_PER_EM) * fontSize
 }
 
-data class LogoSpec(
-    val pxWidth: Double, val pxHeight: Double,
+/** Una pieza vectorial del logo (mtype 10004 en Design Space): un <path> de un SVG pegado directo en la app oficial. */
+data class PathSpec(
+    val path: String,
     val left: Double, val top: Double,
+    val width: Double, val height: Double,
     val scaleX: Double, val scaleY: Double,
     val printPower: Int, val printDepth: Int,
 )
 
 data class TextSpec(
     val top: Double, val scaleX: Double, val scaleY: Double, val objectHeight: Double,
-    val fontSize: Double, val fontStyle: String,
-    // Aunque el nombre se manda como imagen (Lp2Builder.kt), conserva su
-    // propia potencia/profundidad -- se probo compartir la del logo y la
-    // calidad de grabado del nombre salio peor, asi que cada objeto guarda
-    // la suya aunque los dos sean imagenes.
+    val fontSize: Double, val fontFamily: String, val fontStyle: String,
     val printPower: Int, val printDepth: Int,
-    // Times New Roman (esfero/esfero-linea): metrica exacta. AgencyFB (placa): estimacion por ancho medio.
+    // Times New Roman: metrica exacta (TIMES_WIDTHS). Arial/AgencyFB: estimacion por ancho medio (charRatio).
     val usaMetricaTimes: Boolean, val charRatio: Double = 0.0,
 )
 
@@ -74,18 +72,20 @@ data class LayerOverride(val dpi: Double? = null, val px: Double? = null, val de
 
 data class TemplateSpec(
     val id: String, val label: String,
-    val logo: LogoSpec, val text: TextSpec,
+    val logoPaths: List<PathSpec>, val text: TextSpec,
     val enLinea: Boolean, // false = nombre debajo (centrado); true = nombre a la derecha del logo
     val gapMm: Double = 0.0, // espacio extra entre el borde del logo y el nombre (enLinea)
     val materialId: String, val materialKey: String, val materialName: String,
     val airAssist: Boolean,
-    // El nombre se manda como imagen (ver Lp2Builder.kt), asi que cae en la
-    // misma capa que el logo (layerPicture): ya no hay objeto de texto que
-    // use layerFill, por eso no hay override para esa capa.
-    val layerPictureOverride: LayerOverride? = null,
+    // El nombre vuelve a ser un objeto de texto real (mtype 10001, ver
+    // Lp2Builder.kt), asi que cae en layerFill igual que las rutas del
+    // logo (mtype 10004) -- por eso el override es de layerFill, no de
+    // layerPicture (que ya no usa ningun objeto).
+    val layerFillOverride: LayerOverride? = null,
 )
 
 data class Layout(
+    val logoLeft: Double, val logoTop: Double,
     val logoMmWidth: Double, val logoMmHeight: Double,
     val objectWidth: Double, val textMmWidth: Double, val textMmHeight: Double,
     val textLeft: Double, val widthMm: Double, val heightMm: Double,
@@ -96,53 +96,62 @@ fun measureText(text: String, spec: TextSpec): Double =
 
 /** Igual que layout() en templates.js: bounding box + posicion del nombre. */
 fun layout(template: TemplateSpec, name: String): Layout {
-    val logo = template.logo
-    val text = template.text
-    val logoMmWidth = logo.pxWidth * logo.scaleX
-    val logoMmHeight = logo.pxHeight * logo.scaleY
+    val logoLeft = template.logoPaths.minOf { it.left }
+    val logoTop = template.logoPaths.minOf { it.top }
+    val logoRight = template.logoPaths.maxOf { it.left + it.width * it.scaleX }
+    val logoBottom = template.logoPaths.maxOf { it.top + it.height * it.scaleY }
+    val logoMmWidth = logoRight - logoLeft
+    val logoMmHeight = logoBottom - logoTop
 
+    val text = template.text
     val objectWidth = measureText(name, text)
     val textMmWidth = objectWidth * text.scaleX
     val textMmHeight = text.objectHeight * text.scaleY
 
     val textLeft = if (template.enLinea) {
-        logo.left + logoMmWidth + template.gapMm
+        logoRight + template.gapMm
     } else {
-        logo.left + logoMmWidth / 2 - textMmWidth / 2
+        logoLeft + logoMmWidth / 2 - textMmWidth / 2
     }
 
-    val minX = min(logo.left, textLeft)
-    val maxX = max(logo.left + logoMmWidth, textLeft + textMmWidth)
-    val minY = min(logo.top, text.top)
-    val maxY = max(logo.top + logoMmHeight, text.top + textMmHeight)
+    val minX = min(logoLeft, textLeft)
+    val maxX = max(logoRight, textLeft + textMmWidth)
+    val minY = min(logoTop, text.top)
+    val maxY = max(logoBottom, text.top + textMmHeight)
 
-    return Layout(logoMmWidth, logoMmHeight, objectWidth, textMmWidth, textMmHeight, textLeft, maxX - minX, maxY - minY)
+    return Layout(logoLeft, logoTop, logoMmWidth, logoMmHeight, objectWidth, textMmWidth, textMmHeight, textLeft, maxX - minX, maxY - minY)
 }
 
 // Solo queda "Formato Andicom" a proposito: la app se dedico al evento
 // Andicom y se quitaron Esfero/Placa del selector para no confundir en el
 // puesto.
 //
-// Geometria portada tal cual de "Andicom_final.lp2" (guardado el usuario
-// directo en Design Space y localizado en
-// D:\Divergency\laserPeckerAuto\Andicom_final.lp2, id
-// d006cc65-25a8-40df-972b-0ddd567a5180) -- no estimada ni reajustada a mano
-// paso a paso como las versiones anteriores. Verificado antes de aplicar:
-// measureTimesWidth("Alberto Castelblanco", 12) da el mismo
-// 101.63671875 que trae el objeto de texto guardado, asi que la tabla de
-// anchos sigue coincidiendo con lo que mide Design Space. El gapMm sale de
-// restar el borde derecho del logo a la posicion del texto.
-//
-// El logo de Andicom_final.lp2 se agrando 1.8mm a pedido (mismo punto de
-// anclaje, misma proporcion 300x119).
+// Geometria portada tal cual de "ANDICOM_V2.lp2" (guardado por el usuario
+// directo en Design Space, localizado por su nombre unico en
+// D:\Divergency\laserPeckerAuto\ANDICOM_V2.lp2). Cambio de fondo: el logo
+// paso de imagen PNG a vector real -- el usuario pego "Logo negativo.svg"
+// en Design Space y la app lo partio en 14 rutas (mtype 10004), portadas
+// tal cual en LogoPaths.kt. El nombre paso de Times New Roman a Arial
+// (ArialMT), que si existe en Android (a diferencia de Times New Roman),
+// asi que vuelve a ser un objeto de texto real en vez de una imagen
+// rasterizada. Verificado antes de aplicar: 20 caracteres x 12pt x
+// charRatio (110.73046875/(20*12)) reproduce el ancho natural que trae el
+// objeto de texto guardado para "Alberto Castelblanco".
 val PLANTILLAS = listOf(
     TemplateSpec(
         id = "formato-andicom", label = "Formato Andicom",
-        logo = LogoSpec(300.0, 119.0, 8.828717521918248, 48.927805258055386, 0.05613005696314917, 0.05973717514961835, 100, 77),
-        text = TextSpec(50.30552906080053, 0.23449492976728464, 0.26499941327341703, 13.56, 12.0, "", printPower = 80, printDepth = 80, usaMetricaTimes = true),
+        logoPaths = LOGO_ANDICOM_PATHS,
+        text = TextSpec(
+            top = 50.817418240684475,
+            scaleX = 0.3243230327632283, scaleY = 0.27211668336229905,
+            objectHeight = 13.56, fontSize = 12.0, fontFamily = "ArialMT", fontStyle = "",
+            printPower = 80, printDepth = 80,
+            usaMetricaTimes = false, charRatio = 110.73046875 / (20 * 12),
+        ),
         enLinea = true,
-        gapMm = 0.9968847352025314,
+        gapMm = 2.2035930212324786,
         materialId = "stainless_steel_0_10", materialKey = "stainless_steel", materialName = "Acero inoxidable",
         airAssist = false,
+        layerFillOverride = LayerOverride(dpi = 846.66666, px = 1.0, des = "4K"),
     ),
 )

@@ -6,9 +6,9 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.Path
 import android.graphics.RectF
 import android.graphics.Typeface
 import android.hardware.usb.UsbManager
@@ -110,15 +110,6 @@ class MainActivity : AppCompatActivity() {
         super.onPause()
         unregisterReceiver(usbReceiver)
     }
-
-    // Tinos (Google Fonts, Apache-2.0, empaquetada en assets/fonts): elegante,
-    // libre de redistribuir (Times New Roman no lo es, y Android no la trae
-    // instalada), y con las mismas metricas de avance que Times New Roman, que
-    // es la fuente con la que Design Space mide de verdad. Con esto la vista
-    // previa no depende de que "serif" generico decida poner cada fabricante
-    // de tablet -- el ancho que calcula TIMES_WIDTHS coincide con lo que se ve.
-    private val tinosRegular: Typeface by lazy { Typeface.createFromAsset(assets, "fonts/Tinos-Regular.ttf") }
-    private val tinosItalic: Typeface by lazy { Typeface.createFromAsset(assets, "fonts/Tinos-Italic.ttf") }
 
     /**
      * Ajusta el alto del recuadro de vista previa al aspecto real del bitmap
@@ -256,20 +247,74 @@ class MainActivity : AppCompatActivity() {
         .ifEmpty { "placa" }
 
     /**
+     * Convierte un "d" de SVG (M/L/C/Q/Z absolutos, que es lo unico que usa
+     * Design Space en las rutas que exporta) a un android.graphics.Path,
+     * dejando las coordenadas TAL CUAL vienen -- sin restar min-x/min-y
+     * todavia, eso se hace en dibujarVistaPrevia() porque hace falta ese
+     * bbox propio de la ruta para el offset (ver mas abajo).
+     */
+    private fun parsearPathSvg(d: String): Path {
+        val tokens = Regex("[A-Za-z]|-?[0-9]*\\.?[0-9]+(?:[eE][-+]?[0-9]+)?").findAll(d).map { it.value }.toList()
+        val path = Path()
+        var i = 0
+        var cmd = ' '
+        var startX = 0f
+        var startY = 0f
+        fun num(): Float { val v = tokens[i].toFloat(); i++; return v }
+        while (i < tokens.size) {
+            val tok = tokens[i]
+            if (tok.length == 1 && tok[0].isLetter()) {
+                cmd = tok[0]
+                i++
+            }
+            when (cmd.uppercaseChar()) {
+                'M' -> {
+                    val x = num(); val y = num()
+                    path.moveTo(x, y)
+                    startX = x; startY = y
+                    cmd = 'L'
+                }
+                'L' -> {
+                    val x = num(); val y = num()
+                    path.lineTo(x, y)
+                }
+                'C' -> {
+                    val x1 = num(); val y1 = num(); val x2 = num(); val y2 = num(); val x = num(); val y = num()
+                    path.cubicTo(x1, y1, x2, y2, x, y)
+                }
+                'Q' -> {
+                    val x1 = num(); val y1 = num(); val x = num(); val y = num()
+                    path.quadTo(x1, y1, x, y)
+                }
+                'Z' -> {
+                    path.close()
+                    path.moveTo(startX, startY)
+                }
+                else -> i++
+            }
+        }
+        return path
+    }
+
+    /**
+     * bbox propio de la ruta (en unidades nativas del path, antes de
+     * escalar) -- Design Space guarda left/top/scaleX/scaleY relativos a
+     * ESTE bbox, no al origen (0,0) del SVG completo: cada letra del logo
+     * tiene sus propias coordenadas dentro del rango 0..3299 del SVG
+     * original, y sin restar este offset las letras salen regadas con
+     * huecos enormes entre ellas (comprobado a mano en Python contra la
+     * miniatura real antes de escribir esto).
+     */
+    private fun bboxNativo(path: Path): RectF {
+        val r = RectF()
+        path.computeBounds(r, true)
+        return r
+    }
+
+    /**
      * Solo para la vista previa dentro de nuestra propia app: logo + nombre
-     * con la misma geometria del .lp2.
-     *
-     * El tamano de fuente NO se puede sacar de la altura de la caja
-     * (`textMmHeight`) como se hacia antes: eso trataba la altura del objeto
-     * como si fuera el tamano de fuente en Android, y salia gigante y
-     * descuadrado contra el logo. Design Space arma el texto a su tamano
-     * natural con la fuente real y le aplica un scaleX/scaleY para llegar al
-     * tamano final; aqui se hace lo mismo -- se mide el texto a un tamano de
-     * referencia con la fuente que de verdad va a dibujar Android (que no es
-     * Times New Roman: ese systemfont no existe en Android, por eso el ancho
-     * se sigue calculando aparte con TIMES_WIDTHS) y se escala esa medida
-     * exacto a la caja destino. Asi el resultado no depende de que fuente
-     * sustituya Android, igual que tampoco depende del logo.
+     * con la misma geometria del .lp2 (el .lp2 real que se manda no pasa
+     * por aqui, usa los datos de LogoPaths.kt/Templates.kt tal cual).
      */
     private fun dibujarVistaPrevia(plantilla: TemplateSpec, nombre: String): Bitmap {
         val geo = layout(plantilla, nombre)
@@ -277,13 +322,15 @@ class MainActivity : AppCompatActivity() {
             isAntiAlias = true
             color = Color.BLACK
             textSize = 200f
-            typeface = if (plantilla.text.fontStyle == "italic") tinosItalic else tinosRegular
+            typeface = if (plantilla.text.fontStyle == "italic") {
+                Typeface.create(Typeface.SANS_SERIF, Typeface.ITALIC)
+            } else {
+                Typeface.SANS_SERIF
+            }
         }
 
-        val minX = minOf(plantilla.logo.left, geo.textLeft)
-        val minY = minOf(plantilla.logo.top, plantilla.text.top)
-        val origenXMm = minX - MARGEN_MM
-        val origenYMm = minY - MARGEN_MM
+        val origenXMm = geo.logoLeft - MARGEN_MM
+        val origenYMm = geo.logoTop - MARGEN_MM
         val anchoPx = ((geo.widthMm + MARGEN_MM * 2) * PX_POR_MM).toInt().coerceAtLeast(1)
         val altoPx = ((geo.heightMm + MARGEN_MM * 2) * PX_POR_MM).toInt().coerceAtLeast(1)
 
@@ -291,11 +338,22 @@ class MainActivity : AppCompatActivity() {
         val canvas = Canvas(bitmap)
         canvas.drawColor(Color.WHITE)
 
-        val logo = BitmapFactory.decodeStream(assets.open("logo_original.png"))
-        val dstLeft = ((plantilla.logo.left - origenXMm) * PX_POR_MM).toFloat()
-        val dstTop = ((plantilla.logo.top - origenYMm) * PX_POR_MM).toFloat()
-        val dst = RectF(dstLeft, dstTop, dstLeft + (geo.logoMmWidth * PX_POR_MM).toFloat(), dstTop + (geo.logoMmHeight * PX_POR_MM).toFloat())
-        canvas.drawBitmap(logo, null, dst, null)
+        val logoPaint = android.graphics.Paint().apply {
+            isAntiAlias = true
+            color = Color.BLACK
+            style = android.graphics.Paint.Style.FILL
+        }
+        for (spec in plantilla.logoPaths) {
+            val nativo = parsearPathSvg(spec.path)
+            val bbox = bboxNativo(nativo)
+            val dstLeftPx = ((spec.left - bbox.left * spec.scaleX - origenXMm) * PX_POR_MM).toFloat()
+            val dstTopPx = ((spec.top - bbox.top * spec.scaleY - origenYMm) * PX_POR_MM).toFloat()
+            canvas.save()
+            canvas.translate(dstLeftPx, dstTopPx)
+            canvas.scale((spec.scaleX * PX_POR_MM).toFloat(), (spec.scaleY * PX_POR_MM).toFloat())
+            canvas.drawPath(nativo, logoPaint)
+            canvas.restore()
+        }
 
         val fm = paint.fontMetrics
         val medidoAnchoPx = paint.measureText(nombre)

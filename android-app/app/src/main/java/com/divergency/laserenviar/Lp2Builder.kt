@@ -1,11 +1,6 @@
 package com.divergency.laserenviar
 
 import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.Color
-import android.graphics.Typeface
-import android.text.TextPaint
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
@@ -18,10 +13,14 @@ import kotlin.random.Random
 /**
  * Constructor de proyectos .lp2 para LaserPecker Design Space, portado de
  * src/lp2.js + src/badge.js del puente de escritorio. Mismo contenedor
- * (ZIP STORED con preview.png + res/<uuid>.png + .lpproject) y mismos
- * nombres de campo -- verificados contra el manifiesto/strings de la app
- * oficial de Android (com.hingin.lp1.hiprint), que declara "laserOptions",
+ * (ZIP STORED con preview.png + res/ + .lpproject) y mismos nombres de
+ * campo -- verificados contra el manifiesto/strings de la app oficial de
+ * Android (com.hingin.lp1.hiprint), que declara "laserOptions",
  * "layerFill", "layerPicture", "file_id", "swVersion", "hwVersion" tal cual.
+ *
+ * El logo va como rutas vectoriales (mtype 10004, ver LogoPaths.kt) y el
+ * nombre como texto real (mtype 10001) en Arial -- ninguno de los dos
+ * necesita imagenes embebidas, asi que res/ queda vacio.
  */
 
 private data class DefaultLayer(
@@ -94,50 +93,6 @@ private fun buildLaserOptions(overrides: Map<String, LayerPatch>, airAssist: Boo
     return arr
 }
 
-// Resolucion a la que se rasteriza el nombre, en pixeles por mm (~610 dpi,
-// mas fino que el logo original de 300x119px para que el trazo no se vea
-// escalonado al grabar). Times New Roman y AgencyFB-Reg (las fuentes de los
-// proyectos originales) no existen en Android: Design Space las sustituye Y
-// REMIDE el texto al abrir el .lp2, lo que descuadra el nombre contra el
-// logo en la tablet aunque el archivo tenga la geometria correcta -- se
-// comprobo en un dispositivo real (informaba 6.43mm de alto para una caja
-// guardada en 5.82mm). Por eso el nombre se manda ya rasterizado con la
-// fuente empaquetada (Tinos, metricamente igual a Times New Roman), igual
-// que el logo: una imagen no se puede "remedir" con otra fuente.
-private const val RENDER_PX_POR_MM = 24f
-
-private fun renderizarNombre(context: Context, template: TemplateSpec, nombre: String, geo: Layout): Bitmap {
-    val archivoFuente = if (template.text.fontStyle == "italic") "fonts/Tinos-Italic.ttf" else "fonts/Tinos-Regular.ttf"
-    val paint = TextPaint().apply {
-        isAntiAlias = true
-        color = Color.BLACK
-        typeface = Typeface.createFromAsset(context.assets, archivoFuente)
-        textSize = 200f
-    }
-    val fm = paint.fontMetrics
-    val medidoAnchoPx = paint.measureText(nombre)
-    val medidoAltoPx = fm.descent - fm.ascent
-
-    val anchoPx = (geo.textMmWidth * RENDER_PX_POR_MM).toInt().coerceAtLeast(1)
-    val altoPx = (geo.textMmHeight * RENDER_PX_POR_MM).toInt().coerceAtLeast(1)
-    val escalaX = if (medidoAnchoPx > 0f) anchoPx / medidoAnchoPx else 1f
-    val escalaY = if (medidoAltoPx > 0f) altoPx / medidoAltoPx else 1f
-
-    val bitmap = Bitmap.createBitmap(anchoPx, altoPx, Bitmap.Config.ARGB_8888)
-    val canvas = Canvas(bitmap)
-    canvas.save()
-    canvas.scale(escalaX, escalaY)
-    canvas.drawText(nombre, 0f, -fm.ascent, paint)
-    canvas.restore()
-    return bitmap
-}
-
-private fun pngBytes(bitmap: Bitmap): ByteArray =
-    ByteArrayOutputStream().use { out ->
-        bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
-        out.toByteArray()
-    }
-
 private fun randomObjectId(): Long = Random.nextLong(1, 0xffffffffL)
 
 private fun randomHex(bytes: Int): String {
@@ -167,82 +122,58 @@ private fun createStoredZip(entries: List<ZipEntrySpec>): ByteArray {
     return baos.toByteArray()
 }
 
+private fun pathObjectJson(spec: PathSpec, index: Int): JSONObject = JSONObject().apply {
+    put("id", randomObjectId())
+    put("mtype", 10004)
+    put("uuid", UUID.randomUUID().toString())
+    put("icon", "dotted")
+    put("name", "layout $index")
+    put("angle", 0)
+    put("left", spec.left)
+    put("top", spec.top)
+    put("width", spec.width)
+    put("height", spec.height)
+    put("scaleX", spec.scaleX)
+    put("scaleY", spec.scaleY)
+    put("printPower", spec.printPower)
+    put("printDepth", spec.printDepth)
+    put("printCount", 1)
+    put("printSpeed", 0)
+    put("isCut", false)
+    put("isMetalCut", false)
+    put("flipX", false)
+    put("flipY", false)
+    put("skewX", 0)
+    put("skewY", 0)
+    put("paintStyle", 0)
+    put("visible", true)
+    put("strokeWidth", 0)
+    put("groupId", "")
+    put("groupName", "")
+    put("path", spec.path)
+}
+
 /** Construye el .lp2 (logo fijo + nombre) para una plantilla dada. */
 fun buildBadgeLp2(context: Context, template: TemplateSpec, name: String): ByteArray {
     val geo = layout(template, name)
     val fileId = randomHex(16)
     val now = System.currentTimeMillis()
 
-    val logoOriginal = context.assets.open("logo_original.png").use { it.readBytes() }
-    val logoSrc = context.assets.open("logo_src.png").use { it.readBytes() }
+    val logoObjects = template.logoPaths.mapIndexed { i, spec -> pathObjectJson(spec, i + 1) }
 
-    val originalUri = "res/${UUID.randomUUID()}.png"
-    val srcUri = "res/${UUID.randomUUID()}.png"
-
-    val logoObject = JSONObject().apply {
-        put("id", randomObjectId())
-        put("mtype", 10010)
-        put("uuid", UUID.randomUUID().toString())
-        put("icon", "tool-image")
-        put("name", "image 1")
-        put("angle", 0)
-        put("left", template.logo.left)
-        put("top", template.logo.top)
-        put("width", template.logo.pxWidth)
-        put("height", template.logo.pxHeight)
-        put("scaleX", template.logo.scaleX)
-        put("scaleY", template.logo.scaleY)
-        put("printPower", template.logo.printPower)
-        put("printDepth", template.logo.printDepth)
-        put("printCount", 1)
-        put("printSpeed", 0)
-        put("isCut", false)
-        put("isMetalCut", false)
-        put("flipX", false)
-        put("flipY", false)
-        put("skewX", 0)
-        put("skewY", 0)
-        put("paintStyle", 0)
-        put("visible", true)
-        put("strokeWidth", 0)
-        put("groupId", "")
-        put("groupName", "")
-        put("imageFilter", 5)
-        put("contrast", 0)
-        put("brightness", 0)
-        put("blackThreshold", 132)
-        put("sealThreshold", 123)
-        put("printsThreshold", 210)
-        put("inverse", false)
-        put("imageOriginalUri", originalUri)
-        put("srcUri", srcUri)
-    }
-
-    val nombreBitmap = renderizarNombre(context, template, name, geo)
-    val nombreBytes = pngBytes(nombreBitmap)
-    val nombreOriginalUri = "res/${UUID.randomUUID()}.png"
-    val nombreSrcUri = "res/${UUID.randomUUID()}.png"
-
-    // Se manda como imagen, no como texto editable: ver el comentario de
-    // renderizarNombre(). Se probo compartir la potencia del logo
-    // (layerPicture) y la calidad de grabado del nombre bajo -- el trazo
-    // fino del texto no aguanta la misma potencia que el area solida del
-    // logo. Cada objeto guarda su propio printPower/printDepth (funciona:
-    // son campos del objeto, no solo del perfil de la capa), asi que el
-    // nombre vuelve a su ajuste original aunque los dos sean imagenes.
     val nameObject = JSONObject().apply {
         put("id", randomObjectId())
-        put("mtype", 10010)
+        put("mtype", 10001)
         put("uuid", UUID.randomUUID().toString())
-        put("icon", "tool-image")
-        put("name", "image 2")
+        put("icon", "tool-text")
+        put("name", "text 1")
         put("angle", 0)
         put("left", geo.textLeft)
         put("top", template.text.top)
-        put("width", nombreBitmap.width.toDouble())
-        put("height", nombreBitmap.height.toDouble())
-        put("scaleX", geo.textMmWidth / nombreBitmap.width)
-        put("scaleY", geo.textMmHeight / nombreBitmap.height)
+        put("width", geo.objectWidth)
+        put("height", template.text.objectHeight)
+        put("scaleX", template.text.scaleX)
+        put("scaleY", template.text.scaleY)
         put("printPower", template.text.printPower)
         put("printDepth", template.text.printDepth)
         put("printCount", 1)
@@ -258,25 +189,32 @@ fun buildBadgeLp2(context: Context, template: TemplateSpec, name: String): ByteA
         put("strokeWidth", 0)
         put("groupId", "")
         put("groupName", "")
-        put("imageFilter", 5)
-        put("contrast", 0)
-        put("brightness", 0)
-        put("blackThreshold", 132)
-        put("sealThreshold", 123)
-        put("printsThreshold", 210)
-        put("inverse", false)
-        put("imageOriginalUri", nombreOriginalUri)
-        put("srcUri", nombreSrcUri)
+        put("curvature", 0)
+        put("text", name)
+        put("textAlign", "left")
+        put("fontSize", template.text.fontSize)
+        put("lineHeight", 1.1)
+        put("charSpacing", 0)
+        put("fontFamily", template.text.fontFamily)
+        put("fontWeight", "normal")
+        put("fontStyle", template.text.fontStyle)
+        put("underline", false)
+        put("linethrough", false)
+        put("orientation", 0)
+        put("textColor", "#000000")
     }
 
-    val dataArray = JSONArray().apply { put(nameObject); put(logoObject) }
+    val dataArray = JSONArray().apply {
+        put(nameObject)
+        for (o in logoObjects) put(o)
+    }
 
     val overrides = mapOf(
-        "layerPicture" to LayerPatch(
-            printPower = template.logo.printPower, printDepth = template.logo.printDepth,
+        "layerFill" to LayerPatch(
+            printPower = template.text.printPower, printDepth = template.text.printDepth,
             materialId = template.materialId, materialKey = template.materialKey, materialName = template.materialName,
-            dpi = template.layerPictureOverride?.dpi, px = template.layerPictureOverride?.px, des = template.layerPictureOverride?.des,
-            fanLevel = template.layerPictureOverride?.fanLevel, pump = template.layerPictureOverride?.pump,
+            dpi = template.layerFillOverride?.dpi, px = template.layerFillOverride?.px, des = template.layerFillOverride?.des,
+            fanLevel = template.layerFillOverride?.fanLevel, pump = template.layerFillOverride?.pump,
         ),
     )
     val laserOptions = buildLaserOptions(overrides, template.airAssist)
@@ -295,14 +233,15 @@ fun buildBadgeLp2(context: Context, template: TemplateSpec, name: String): ByteA
         put("laserOptions", laserOptions.toString())
     }
 
+    // La miniatura de la galeria sigue siendo el logo en PNG (no el vector):
+    // es solo cosmetico -- ver la limitacion ya documentada en el README
+    // ("la miniatura muestra solo el logo, sin el nombre").
+    val logoPreview = context.assets.open("logo_original.png").use { it.readBytes() }
+
     return createStoredZip(
         listOf(
-            ZipEntrySpec("preview.png", logoOriginal),
+            ZipEntrySpec("preview.png", logoPreview),
             ZipEntrySpec("res/", ByteArray(0), isDir = true),
-            ZipEntrySpec(originalUri, logoOriginal),
-            ZipEntrySpec(srcUri, logoSrc),
-            ZipEntrySpec(nombreOriginalUri, nombreBytes),
-            ZipEntrySpec(nombreSrcUri, nombreBytes),
             ZipEntrySpec(".lpproject", lpproject.toString(2).toByteArray(Charsets.UTF_8)),
         )
     )
