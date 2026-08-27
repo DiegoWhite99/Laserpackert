@@ -123,24 +123,22 @@ fun layout(template: TemplateSpec, name: String): Layout {
 // Andicom y se quitaron Esfero/Placa del selector para no confundir en el
 // puesto.
 //
-// Geometria portada tal cual de "formato Andicom.svg", el export real que
-// mando el usuario desde Design Space (mismo uuid de logo que el .lp2
-// original: 95d3fb30-a001-4205-a6e9-e66a2fb9ada6) -- no estimada ni
-// reajustada a mano paso a paso como las versiones anteriores. El svg trae
-// el logo por transform matrix(a 0 0 d e f) sobre una imagen de 300x119 en
-// (-150,-59.5), y el nombre "Diego Castelblanco" ya rasterizado por Design
-// Space en (17.697922335366293, 50.65927467789312) de 17.911145346398 x
-// 2.051413674330462mm -- de ahi sale scaleX/scaleY del texto (dividiendo
-// por measureTimesWidth("Diego Castelblanco", 12) = 94.306640625 y por
-// objectHeight = 13.56) y el gapMm entre el borde del logo y el nombre
-// (0.5637253240662936mm, el espacio que dejo el usuario en el original).
+// Geometria portada tal cual de "Andicom_final.lp2" (guardado el usuario
+// directo en Design Space y localizado en
+// D:\Divergency\laserPeckerAuto\Andicom_final.lp2, id
+// d006cc65-25a8-40df-972b-0ddd567a5180) -- no estimada ni reajustada a mano
+// paso a paso como las versiones anteriores. Verificado antes de aplicar:
+// measureTimesWidth("Alberto Castelblanco", 12) da el mismo
+// 101.63671875 que trae el objeto de texto guardado, asi que la tabla de
+// anchos sigue coincidiendo con lo que mide Design Space. El gapMm sale de
+// restar el borde derecho del logo a la posicion del texto.
 val PLANTILLAS = listOf(
     TemplateSpec(
         id = "formato-andicom", label = "Formato Andicom",
-        logo = LogoSpec(300.0, 119.0, 5.671199711300001, 49.265384163949996, 0.038209991, 0.0406655017, 100, 77),
-        text = TextSpec(50.65927467789312, 0.1899245400715704, 0.15128419427215795, 13.56, 12.0, "", printPower = 80, printDepth = 80, usaMetricaTimes = true),
+        logo = LogoSpec(300.0, 119.0, 8.828717521918248, 48.927805258055386, 0.050130056963149164, 0.053351593693090976, 100, 77),
+        text = TextSpec(50.30552906080053, 0.23449492976728464, 0.26499941327341703, 13.56, 12.0, "", printPower = 80, printDepth = 80, usaMetricaTimes = true),
         enLinea = true,
-        gapMm = 0.5637253240662936,
+        gapMm = 0.9968847352025314,
         materialId = "stainless_steel_0_10", materialKey = "stainless_steel", materialName = "Acero inoxidable",
         airAssist = false,
     ),
